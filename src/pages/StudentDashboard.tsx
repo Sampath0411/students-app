@@ -222,7 +222,6 @@ const StudentDashboard = () => {
             </div>
           )}
         </Card>
-      </div>
     </AppShell>
   );
 };
