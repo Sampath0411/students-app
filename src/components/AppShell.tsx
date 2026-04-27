@@ -2,18 +2,27 @@ import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LogOut, LayoutDashboard, Users, CalendarDays, ClipboardCheck, UserCheck } from "lucide-react";
+import { GraduationCap, LogOut, LayoutDashboard, Users, CalendarDays, ClipboardCheck, UserCheck, Bell, FileText, BookOpen, Megaphone, User, QrCode, ScanLine } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const studentNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/notifications", label: "Notifications", icon: Bell },
+  { to: "/assignments", label: "Assignments", icon: FileText },
+  { to: "/records", label: "Records", icon: BookOpen },
+  { to: "/announcements", label: "Announcements", icon: Megaphone },
+  { to: "/profile", label: "Profile & QR", icon: User },
 ];
 const adminNav = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard },
   { to: "/admin/pending", label: "Pending", icon: UserCheck },
   { to: "/admin/students", label: "Students", icon: Users },
   { to: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
+  { to: "/admin/scan", label: "Scan QR", icon: ScanLine },
   { to: "/admin/timetable", label: "Timetable", icon: CalendarDays },
+  { to: "/admin/assignments", label: "Assignments", icon: FileText },
+  { to: "/admin/records", label: "Records", icon: BookOpen },
+  { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
 ];
 
 export const AppShell = ({ children, kind }: { children: ReactNode; kind: "admin" | "student" }) => {

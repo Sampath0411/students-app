@@ -35,6 +35,14 @@ const Login = ({ admin = false }: { admin?: boolean }) => {
       toast.error("This account is not an admin.");
       return;
     }
+    // Generate fresh 12-digit login code for students
+    if (!isAdmin) {
+      const code = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join("");
+      await supabase.from("login_codes").upsert(
+        { user_id: data.user.id, code, generated_at: new Date().toISOString() },
+        { onConflict: "user_id" },
+      );
+    }
     toast.success("Welcome back!");
     navigate(isAdmin ? "/admin" : "/dashboard");
   };
