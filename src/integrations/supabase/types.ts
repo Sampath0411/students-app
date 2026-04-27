@@ -118,24 +118,33 @@ export type Database = {
           date: string
           id: string
           marked_by: string | null
+          period_label: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           student_id: string
+          subject: string | null
+          timetable_id: string | null
         }
         Insert: {
           created_at?: string
           date: string
           id?: string
           marked_by?: string | null
+          period_label?: string | null
           status: Database["public"]["Enums"]["attendance_status"]
           student_id: string
+          subject?: string | null
+          timetable_id?: string | null
         }
         Update: {
           created_at?: string
           date?: string
           id?: string
           marked_by?: string | null
+          period_label?: string | null
           status?: Database["public"]["Enums"]["attendance_status"]
           student_id?: string
+          subject?: string | null
+          timetable_id?: string | null
         }
         Relationships: []
       }
