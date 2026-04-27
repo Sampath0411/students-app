@@ -72,13 +72,14 @@ const AdminScan = () => {
       : null;
 
     // Manual upsert by (student_id, date, timetable_id)
-    const { data: existing } = await supabase
+    const existingQuery: any = supabase
       .from("attendance")
       .select("id")
       .eq("student_id", lc.user_id)
       .eq("date", today)
-      .eq("timetable_id" as any, periodId)
+      .eq("timetable_id", periodId)
       .maybeSingle();
+    const { data: existing } = await existingQuery;
 
     let error;
     if (existing?.id) {
