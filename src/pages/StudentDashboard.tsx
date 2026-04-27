@@ -11,7 +11,8 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 const StudentDashboard = () => {
   const { user, status } = useAuth();
   const [profile, setProfile] = useState<any>(null);
-  const [today, setToday] = useState<any>(null);
+  const [todayAtt, setTodayAtt] = useState<any[]>([]);
+  const [recentAtt, setRecentAtt] = useState<any[]>([]);
   const [timetable, setTimetable] = useState<any[]>([]);
   const [stats, setStats] = useState({ present: 0, absent: 0, late: 0 });
 
@@ -19,15 +20,22 @@ const StudentDashboard = () => {
     if (!user) return;
     const todayStr = new Date().toISOString().slice(0, 10);
     (async () => {
-      const [{ data: prof }, { data: att }, { data: tt }, { data: all }] = await Promise.all([
+      const [{ data: prof }, { data: att }, { data: tt }, { data: all }, { data: recent }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("attendance").select("*").eq("student_id", user.id).eq("date", todayStr).maybeSingle(),
+        supabase.from("attendance").select("*").eq("student_id", user.id).eq("date", todayStr),
         supabase.from("timetable").select("*").order("day_of_week").order("start_time"),
         supabase.from("attendance").select("status").eq("student_id", user.id),
+        supabase
+          .from("attendance")
+          .select("*")
+          .eq("student_id", user.id)
+          .order("date", { ascending: false })
+          .limit(20),
       ]);
       setProfile(prof);
-      setToday(att);
+      setTodayAtt(att || []);
       setTimetable(tt || []);
+      setRecentAtt(recent || []);
       const s = { present: 0, absent: 0, late: 0 };
       (all || []).forEach((a: any) => {
         s[a.status as keyof typeof s]++;
