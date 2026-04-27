@@ -142,25 +142,58 @@ const StudentDashboard = () => {
             <p className="text-sm text-muted-foreground">No classes scheduled today.</p>
           ) : (
             <ul className="space-y-3">
-              {todayClasses.map((c) => (
-                <li key={c.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <div className="font-medium">{c.subject}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.teacher} {c.room && `· Room ${c.room}`}
+              {todayClasses.map((c) => {
+                const a = attByPeriod.get(c.id);
+                return (
+                  <li
+                    key={c.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-3"
+                  >
+                    <div>
+                      <div className="font-medium">{c.subject}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {c.start_time?.slice(0, 5)} – {c.end_time?.slice(0, 5)}
+                        {c.room && ` · Room ${c.room}`}
+                        {c.teacher && ` · ${c.teacher}`}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-sm font-medium text-primary">
-                    {c.start_time?.slice(0, 5)} – {c.end_time?.slice(0, 5)}
-                  </div>
-                </li>
-              ))}
+                    {a ? (
+                      <Badge className={statusColor(a.status)}>{a.status.toUpperCase()}</Badge>
+                    ) : (
+                      <Badge variant="outline">Pending</Badge>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
 
         <Card className="card-elevated p-6">
-          <h2 className="mb-4 text-lg font-semibold">Weekly timetable</h2>
+          <h2 className="mb-4 text-lg font-semibold">Recent attendance</h2>
+          {recentAtt.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No attendance records yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentAtt.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <div className="font-medium">{a.period_label || a.subject || "General"}</div>
+                    <div className="text-xs text-muted-foreground">{a.date}</div>
+                  </div>
+                  <Badge className={statusColor(a.status)}>{a.status}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <Card className="card-elevated mt-6 p-6">
+        <h2 className="mb-4 text-lg font-semibold">Weekly timetable</h2>
           {timetable.length === 0 ? (
             <p className="text-sm text-muted-foreground">No timetable entries yet.</p>
           ) : (
