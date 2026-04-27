@@ -76,18 +76,27 @@ const StudentDashboard = () => {
     );
   }
 
-  const statusBadge = today ? (
-    <Badge
-      className={
-        today.status === "present"
-          ? "bg-success/15 text-success hover:bg-success/15"
-          : today.status === "late"
-            ? "bg-warning/15 text-warning hover:bg-warning/15"
-            : "bg-destructive/15 text-destructive hover:bg-destructive/15"
-      }
-    >
-      {today.status.toUpperCase()}
-    </Badge>
+  const attByPeriod = new Map<string, any>();
+  todayAtt.forEach((a) => {
+    if (a.timetable_id) attByPeriod.set(a.timetable_id, a);
+  });
+  const todaySummary = todayAtt.length
+    ? todayAtt.some((a) => a.status === "present" || a.status === "late")
+      ? `${todayAtt.filter((a) => a.status !== "absent").length}/${todayClasses.length || todayAtt.length} marked`
+      : "Absent"
+    : null;
+
+  const statusColor = (s?: string) =>
+    s === "present"
+      ? "bg-success/15 text-success hover:bg-success/15"
+      : s === "late"
+        ? "bg-warning/15 text-warning hover:bg-warning/15"
+        : s === "absent"
+          ? "bg-destructive/15 text-destructive hover:bg-destructive/15"
+          : "";
+
+  const statusBadge = todaySummary ? (
+    <Badge className="bg-primary/15 text-primary hover:bg-primary/15">{todaySummary}</Badge>
   ) : (
     <Badge variant="outline">Not marked yet</Badge>
   );
