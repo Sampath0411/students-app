@@ -11,7 +11,8 @@ const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", 
 const StudentDashboard = () => {
   const { user, status } = useAuth();
   const [profile, setProfile] = useState<any>(null);
-  const [today, setToday] = useState<any>(null);
+  const [todayAtt, setTodayAtt] = useState<any[]>([]);
+  const [recentAtt, setRecentAtt] = useState<any[]>([]);
   const [timetable, setTimetable] = useState<any[]>([]);
   const [stats, setStats] = useState({ present: 0, absent: 0, late: 0 });
 
@@ -19,15 +20,22 @@ const StudentDashboard = () => {
     if (!user) return;
     const todayStr = new Date().toISOString().slice(0, 10);
     (async () => {
-      const [{ data: prof }, { data: att }, { data: tt }, { data: all }] = await Promise.all([
+      const [{ data: prof }, { data: att }, { data: tt }, { data: all }, { data: recent }] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-        supabase.from("attendance").select("*").eq("student_id", user.id).eq("date", todayStr).maybeSingle(),
+        supabase.from("attendance").select("*").eq("student_id", user.id).eq("date", todayStr),
         supabase.from("timetable").select("*").order("day_of_week").order("start_time"),
         supabase.from("attendance").select("status").eq("student_id", user.id),
+        supabase
+          .from("attendance")
+          .select("*")
+          .eq("student_id", user.id)
+          .order("date", { ascending: false })
+          .limit(20),
       ]);
       setProfile(prof);
-      setToday(att);
+      setTodayAtt(att || []);
       setTimetable(tt || []);
+      setRecentAtt(recent || []);
       const s = { present: 0, absent: 0, late: 0 };
       (all || []).forEach((a: any) => {
         s[a.status as keyof typeof s]++;
@@ -68,18 +76,27 @@ const StudentDashboard = () => {
     );
   }
 
-  const statusBadge = today ? (
-    <Badge
-      className={
-        today.status === "present"
-          ? "bg-success/15 text-success hover:bg-success/15"
-          : today.status === "late"
-            ? "bg-warning/15 text-warning hover:bg-warning/15"
-            : "bg-destructive/15 text-destructive hover:bg-destructive/15"
-      }
-    >
-      {today.status.toUpperCase()}
-    </Badge>
+  const attByPeriod = new Map<string, any>();
+  todayAtt.forEach((a) => {
+    if (a.timetable_id) attByPeriod.set(a.timetable_id, a);
+  });
+  const todaySummary = todayAtt.length
+    ? todayAtt.some((a) => a.status === "present" || a.status === "late")
+      ? `${todayAtt.filter((a) => a.status !== "absent").length}/${todayClasses.length || todayAtt.length} marked`
+      : "Absent"
+    : null;
+
+  const statusColor = (s?: string) =>
+    s === "present"
+      ? "bg-success/15 text-success hover:bg-success/15"
+      : s === "late"
+        ? "bg-warning/15 text-warning hover:bg-warning/15"
+        : s === "absent"
+          ? "bg-destructive/15 text-destructive hover:bg-destructive/15"
+          : "";
+
+  const statusBadge = todaySummary ? (
+    <Badge className="bg-primary/15 text-primary hover:bg-primary/15">{todaySummary}</Badge>
   ) : (
     <Badge variant="outline">Not marked yet</Badge>
   );
@@ -125,25 +142,58 @@ const StudentDashboard = () => {
             <p className="text-sm text-muted-foreground">No classes scheduled today.</p>
           ) : (
             <ul className="space-y-3">
-              {todayClasses.map((c) => (
-                <li key={c.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                  <div>
-                    <div className="font-medium">{c.subject}</div>
-                    <div className="text-xs text-muted-foreground">
-                      {c.teacher} {c.room && `· Room ${c.room}`}
+              {todayClasses.map((c) => {
+                const a = attByPeriod.get(c.id);
+                return (
+                  <li
+                    key={c.id}
+                    className="flex items-center justify-between rounded-lg border border-border p-3"
+                  >
+                    <div>
+                      <div className="font-medium">{c.subject}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {c.start_time?.slice(0, 5)} – {c.end_time?.slice(0, 5)}
+                        {c.room && ` · Room ${c.room}`}
+                        {c.teacher && ` · ${c.teacher}`}
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-sm font-medium text-primary">
-                    {c.start_time?.slice(0, 5)} – {c.end_time?.slice(0, 5)}
-                  </div>
-                </li>
-              ))}
+                    {a ? (
+                      <Badge className={statusColor(a.status)}>{a.status.toUpperCase()}</Badge>
+                    ) : (
+                      <Badge variant="outline">Pending</Badge>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           )}
         </Card>
 
         <Card className="card-elevated p-6">
-          <h2 className="mb-4 text-lg font-semibold">Weekly timetable</h2>
+          <h2 className="mb-4 text-lg font-semibold">Recent attendance</h2>
+          {recentAtt.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No attendance records yet.</p>
+          ) : (
+            <ul className="space-y-2">
+              {recentAtt.map((a) => (
+                <li
+                  key={a.id}
+                  className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2 text-sm"
+                >
+                  <div>
+                    <div className="font-medium">{a.period_label || a.subject || "General"}</div>
+                    <div className="text-xs text-muted-foreground">{a.date}</div>
+                  </div>
+                  <Badge className={statusColor(a.status)}>{a.status}</Badge>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
+
+      <Card className="card-elevated mt-6 p-6">
+        <h2 className="mb-4 text-lg font-semibold">Weekly timetable</h2>
           {timetable.length === 0 ? (
             <p className="text-sm text-muted-foreground">No timetable entries yet.</p>
           ) : (
@@ -172,7 +222,6 @@ const StudentDashboard = () => {
             </div>
           )}
         </Card>
-      </div>
     </AppShell>
   );
 };
