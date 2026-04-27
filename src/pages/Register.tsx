@@ -42,23 +42,37 @@ const Register = () => {
       return;
     }
     setLoading(true);
+    // Pre-check for duplicate student_id to give a clear error
+    const { data: existing } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("student_id", form.student_id.trim())
+      .maybeSingle();
+    if (existing) {
+      setLoading(false);
+      toast.error("That Student ID is already registered. Please use a different one.");
+      return;
+    }
     const { error } = await supabase.auth.signUp({
-      email: form.email,
+      email: form.email.trim(),
       password: form.password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
         data: {
-          full_name: form.full_name,
-          student_id: form.student_id,
-          phone: form.phone,
-          department: form.department,
+          full_name: form.full_name.trim(),
+          student_id: form.student_id.trim(),
+          phone: form.phone.trim(),
+          department: form.department.trim(),
           date_of_birth: form.date_of_birth,
         },
       },
     });
     setLoading(false);
     if (error) {
-      toast.error(error.message);
+      const msg = /duplicate|already/i.test(error.message)
+        ? "An account with this email or student ID already exists."
+        : error.message;
+      toast.error(msg);
       return;
     }
     toast.success("Registration submitted! Pending admin approval.");
