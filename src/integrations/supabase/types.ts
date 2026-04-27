@@ -14,6 +14,104 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          body: string
+          created_at: string
+          created_by: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      assignment_grades: {
+        Row: {
+          assignment_id: string
+          feedback: string | null
+          graded_at: string
+          graded_by: string | null
+          id: string
+          max_score: number | null
+          score: number | null
+          student_id: string
+        }
+        Insert: {
+          assignment_id: string
+          feedback?: string | null
+          graded_at?: string
+          graded_by?: string | null
+          id?: string
+          max_score?: number | null
+          score?: number | null
+          student_id: string
+        }
+        Update: {
+          assignment_id?: string
+          feedback?: string | null
+          graded_at?: string
+          graded_by?: string | null
+          id?: string
+          max_score?: number | null
+          score?: number | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_grades_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
       attendance: {
         Row: {
           created_at: string
@@ -41,6 +139,60 @@ export type Database = {
         }
         Relationships: []
       }
+      login_codes: {
+        Row: {
+          code: string
+          generated_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          code: string
+          generated_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          code?: string
+          generated_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notifications: {
+        Row: {
+          body: string | null
+          category: string
+          created_at: string
+          id: string
+          link: string | null
+          read: boolean
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string | null
+          category?: string
+          created_at?: string
+          id?: string
+          link?: string | null
+          read?: boolean
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -49,6 +201,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          last_profile_edit: string | null
           phone: string | null
           status: Database["public"]["Enums"]["profile_status"]
           student_id: string
@@ -61,6 +214,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          last_profile_edit?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["profile_status"]
           student_id: string
@@ -73,10 +227,47 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          last_profile_edit?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["profile_status"]
           student_id?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      records: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          max_score: number | null
+          remarks: string | null
+          score: number | null
+          student_id: string
+          subject: string
+          term: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_score?: number | null
+          remarks?: string | null
+          score?: number | null
+          student_id: string
+          subject: string
+          term?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_score?: number | null
+          remarks?: string | null
+          score?: number | null
+          student_id?: string
+          subject?: string
+          term?: string | null
         }
         Relationships: []
       }
