@@ -198,18 +198,27 @@ export type Database = {
           code: string
           generated_at: string
           id: string
+          locked: boolean
+          locked_at: string | null
+          locked_reason: string | null
           user_id: string
         }
         Insert: {
           code: string
           generated_at?: string
           id?: string
+          locked?: boolean
+          locked_at?: string | null
+          locked_reason?: string | null
           user_id: string
         }
         Update: {
           code?: string
           generated_at?: string
           id?: string
+          locked?: boolean
+          locked_at?: string | null
+          locked_reason?: string | null
           user_id?: string
         }
         Relationships: []

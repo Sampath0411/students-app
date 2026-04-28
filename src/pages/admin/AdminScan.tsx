@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ScanLine, CheckCircle2, Camera, CameraOff } from "lucide-react";
+import { Loader2, ScanLine, CheckCircle2, Camera, CameraOff, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { Scanner } from "@yudiel/react-qr-scanner";
 
@@ -55,10 +55,25 @@ const AdminScan = () => {
     }
     setLoading(true);
     const period = timetable.find((t) => t.id === periodId);
-    const { data: lc } = await supabase.from("login_codes").select("user_id").eq("code", useCode).maybeSingle();
+    const { data: lc } = await supabase
+      .from("login_codes")
+      .select("user_id, locked")
+      .eq("code", useCode)
+      .maybeSingle();
     if (!lc) {
       setLoading(false);
       toast.error("No student found for that code");
+      return;
+    }
+    if ((lc as any).locked) {
+      setLoading(false);
+      const { data: prof } = await supabase
+        .from("profiles")
+        .select("full_name, student_id")
+        .eq("id", lc.user_id)
+        .maybeSingle();
+      setLast({ ...prof, user_id: lc.user_id, status: "locked", period_label: "QR locked", locked: true });
+      toast.error(`${prof?.full_name || "Student"}'s QR is locked. Unlock to re-scan.`);
       return;
     }
     const { data: prof } = await supabase
@@ -110,8 +125,21 @@ const AdminScan = () => {
       return;
     }
     toast.success(`${prof?.full_name || "Student"} · ${period?.subject || "period"} → ${status}`);
-    setLast({ ...prof, status, period_label: periodLabel });
+    setLast({ ...prof, user_id: lc.user_id, status, period_label: periodLabel, locked: true });
     setCode("");
+  };
+
+  const unlockStudent = async (userId: string) => {
+    const { error } = await supabase
+      .from("login_codes")
+      .update({ locked: false, locked_at: null, locked_reason: null } as any)
+      .eq("user_id", userId);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success("QR unlocked");
+    setLast((l: any) => (l ? { ...l, locked: false } : l));
   };
 
   const onCodeChange = (v: string) => {
@@ -244,12 +272,30 @@ const AdminScan = () => {
         </div>
 
         {last && (
-          <div className="mt-6 rounded-lg border border-success/30 bg-success/5 p-4 text-center">
-            <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-success" />
+          <div
+            className={`mt-6 rounded-lg border p-4 text-center ${
+              last.locked ? "border-warning/40 bg-warning/5" : "border-success/30 bg-success/5"
+            }`}
+          >
+            {last.locked ? (
+              <Unlock className="mx-auto mb-2 h-6 w-6 text-warning" />
+            ) : (
+              <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-success" />
+            )}
             <div className="font-semibold">{last.full_name}</div>
             <div className="text-xs text-muted-foreground">
               {last.student_id} · {last.period_label} · marked {last.status}
             </div>
+            {last.locked && last.user_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => unlockStudent(last.user_id)}
+              >
+                <Unlock className="mr-2 h-4 w-4" /> Unlock QR
+              </Button>
+            )}
           </div>
         )}
       </Card>

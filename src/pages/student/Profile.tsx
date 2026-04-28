@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
-import { Loader2, Lock, QrCode } from "lucide-react";
+import { Loader2, Lock, QrCode, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { AvatarPicker } from "@/components/Avatar";
 
@@ -17,6 +17,7 @@ const Profile = () => {
   const { user } = useAuth();
   const [profile, setProfile] = useState<any>(null);
   const [code, setCode] = useState<string>("");
+  const [qrLocked, setQrLocked] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "", department: "", date_of_birth: "" });
   const [avatar, setAvatar] = useState({ style: "micah", seed: "" });
   const [saving, setSaving] = useState(false);
@@ -26,10 +27,11 @@ const Profile = () => {
     if (!user) return;
     const [{ data: p }, { data: lc }] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
-      supabase.from("login_codes").select("code").eq("user_id", user.id).maybeSingle(),
+      supabase.from("login_codes").select("code, locked").eq("user_id", user.id).maybeSingle(),
     ]);
     setProfile(p);
     setCode(lc?.code || "");
+    setQrLocked(!!(lc as any)?.locked);
     if (p) {
       setForm({
         full_name: p.full_name || "",
@@ -44,6 +46,25 @@ const Profile = () => {
 
   useEffect(() => {
     load();
+  }, [user]);
+
+  // Realtime: react when admin locks/unlocks the QR
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel("login_codes_self")
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "login_codes", filter: `user_id=eq.${user.id}` },
+        (payload: any) => {
+          setQrLocked(!!payload.new?.locked);
+          if (payload.new?.code) setCode(payload.new.code);
+        },
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const lastEdit = profile?.last_profile_edit ? new Date(profile.last_profile_edit).getTime() : 0;
@@ -151,13 +172,34 @@ const Profile = () => {
           </p>
           {code ? (
             <div className="flex flex-col items-center gap-3">
-              <div className="rounded-xl bg-white p-4">
-                <QRCodeSVG value={qrPayload} size={200} />
+              <div className="relative rounded-xl bg-white p-4">
+                <div className={qrLocked ? "blur-md select-none pointer-events-none" : ""}>
+                  <QRCodeSVG value={qrPayload} size={200} />
+                </div>
+                {qrLocked && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-xl bg-background/40">
+                    <Lock className="h-8 w-8 text-foreground" />
+                    <span className="rounded-md bg-foreground/80 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-background">
+                      Locked
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="text-center">
                 <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Session code</div>
-                <div className="font-mono text-lg font-bold tracking-widest">{code}</div>
+                <div className={`font-mono text-lg font-bold tracking-widest ${qrLocked ? "blur-sm select-none" : ""}`}>
+                  {code}
+                </div>
               </div>
+              {qrLocked ? (
+                <div className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
+                  <Lock className="h-3.5 w-3.5" /> Attendance recorded — QR locked. Ask admin to unlock.
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/5 px-3 py-2 text-xs text-success">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Active — ready to scan.
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Sign out and back in to generate a code.</p>
