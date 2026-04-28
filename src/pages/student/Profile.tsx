@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { Loader2, Lock, QrCode } from "lucide-react";
 import { toast } from "sonner";
+import { AvatarPicker } from "@/components/Avatar";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -17,6 +18,7 @@ const Profile = () => {
   const [profile, setProfile] = useState<any>(null);
   const [code, setCode] = useState<string>("");
   const [form, setForm] = useState({ full_name: "", phone: "", department: "", date_of_birth: "" });
+  const [avatar, setAvatar] = useState({ style: "micah", seed: "" });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -35,6 +37,7 @@ const Profile = () => {
         department: p.department || "",
         date_of_birth: p.date_of_birth || "",
       });
+      setAvatar({ style: (p as any).avatar_style || "micah", seed: (p as any).avatar_seed || p.id });
     }
     setLoading(false);
   };
@@ -62,8 +65,10 @@ const Profile = () => {
         phone: form.phone || null,
         department: form.department || null,
         date_of_birth: form.date_of_birth || null,
+        avatar_style: avatar.style,
+        avatar_seed: avatar.seed,
         last_profile_edit: new Date().toISOString(),
-      })
+      } as any)
       .eq("id", user!.id);
     setSaving(false);
     if (error) toast.error(error.message);
@@ -83,7 +88,6 @@ const Profile = () => {
     );
   }
 
-  // QR payload encodes student id + login code so admin scanner can identify
   const qrPayload = JSON.stringify({ uid: user?.id, code, sid: profile?.student_id });
 
   return (
@@ -95,7 +99,11 @@ const Profile = () => {
       <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
         <Card className="card-elevated p-6">
           <h2 className="mb-4 text-lg font-semibold">Your information</h2>
-          <form onSubmit={onSave} className="space-y-4">
+          <form onSubmit={onSave} className="space-y-6">
+            <div>
+              <Label className="mb-2 block">Avatar</Label>
+              <AvatarPicker value={avatar} onChange={setAvatar} disabled={!canEdit} />
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <Label>Email (locked)</Label>
