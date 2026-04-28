@@ -148,6 +148,51 @@ export type Database = {
         }
         Relationships: []
       }
+      attendance_audit: {
+        Row: {
+          action: string
+          attendance_id: string | null
+          changed_by: string | null
+          created_at: string
+          date: string
+          id: string
+          new_status: Database["public"]["Enums"]["attendance_status"]
+          old_status: Database["public"]["Enums"]["attendance_status"] | null
+          period_label: string | null
+          student_id: string
+          subject: string | null
+          timetable_id: string | null
+        }
+        Insert: {
+          action: string
+          attendance_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          date: string
+          id?: string
+          new_status: Database["public"]["Enums"]["attendance_status"]
+          old_status?: Database["public"]["Enums"]["attendance_status"] | null
+          period_label?: string | null
+          student_id: string
+          subject?: string | null
+          timetable_id?: string | null
+        }
+        Update: {
+          action?: string
+          attendance_id?: string | null
+          changed_by?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          new_status?: Database["public"]["Enums"]["attendance_status"]
+          old_status?: Database["public"]["Enums"]["attendance_status"] | null
+          period_label?: string | null
+          student_id?: string
+          subject?: string | null
+          timetable_id?: string | null
+        }
+        Relationships: []
+      }
       login_codes: {
         Row: {
           code: string
@@ -204,6 +249,8 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_seed: string | null
+          avatar_style: string | null
           created_at: string
           date_of_birth: string | null
           department: string | null
@@ -217,6 +264,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          avatar_seed?: string | null
+          avatar_style?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
@@ -230,6 +279,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          avatar_seed?: string | null
+          avatar_style?: string | null
           created_at?: string
           date_of_birth?: string | null
           department?: string | null
