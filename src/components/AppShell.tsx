@@ -2,11 +2,12 @@ import { ReactNode } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, LogOut, LayoutDashboard, Users, CalendarDays, ClipboardCheck, UserCheck, Bell, FileText, BookOpen, Megaphone, User, QrCode, ScanLine } from "lucide-react";
+import { GraduationCap, LogOut, LayoutDashboard, Users, CalendarDays, ClipboardCheck, UserCheck, Bell, FileText, BookOpen, Megaphone, User, QrCode, ScanLine, History, FileSpreadsheet, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const studentNav = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { to: "/attendance", label: "My attendance", icon: History },
   { to: "/notifications", label: "Notifications", icon: Bell },
   { to: "/assignments", label: "Assignments", icon: FileText },
   { to: "/records", label: "Records", icon: BookOpen },
@@ -19,6 +20,8 @@ const adminNav = [
   { to: "/admin/students", label: "Students", icon: Users },
   { to: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
   { to: "/admin/scan", label: "Scan QR", icon: ScanLine },
+  { to: "/admin/edit-attendance", label: "Edit attendance", icon: Pencil },
+  { to: "/admin/reports", label: "Reports & Export", icon: FileSpreadsheet },
   { to: "/admin/timetable", label: "Timetable", icon: CalendarDays },
   { to: "/admin/assignments", label: "Assignments", icon: FileText },
   { to: "/admin/records", label: "Records", icon: BookOpen },

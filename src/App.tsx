@@ -23,6 +23,9 @@ import AdminAssignments from "./pages/admin/AdminAssignments";
 import AdminRecords from "./pages/admin/AdminRecords";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminScan from "./pages/admin/AdminScan";
+import AdminAttendanceEdit from "./pages/admin/AdminAttendanceEdit";
+import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
+import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -65,6 +68,9 @@ const App = () => (
             <Route path="/admin/assignments" element={<ProtectedRoute requireRole="admin"><AdminAssignments /></ProtectedRoute>} />
             <Route path="/admin/records" element={<ProtectedRoute requireRole="admin"><AdminRecords /></ProtectedRoute>} />
             <Route path="/admin/announcements" element={<ProtectedRoute requireRole="admin"><AdminAnnouncements /></ProtectedRoute>} />
+            <Route path="/admin/edit-attendance" element={<ProtectedRoute requireRole="admin"><AdminAttendanceEdit /></ProtectedRoute>} />
+            <Route path="/admin/reports" element={<ProtectedRoute requireRole="admin"><AdminAttendanceReports /></ProtectedRoute>} />
+            <Route path="/attendance" element={<ProtectedRoute requireRole="student"><StudentAttendanceHistory /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
