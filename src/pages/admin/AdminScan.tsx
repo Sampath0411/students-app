@@ -272,12 +272,30 @@ const AdminScan = () => {
         </div>
 
         {last && (
-          <div className="mt-6 rounded-lg border border-success/30 bg-success/5 p-4 text-center">
-            <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-success" />
+          <div
+            className={`mt-6 rounded-lg border p-4 text-center ${
+              last.locked ? "border-warning/40 bg-warning/5" : "border-success/30 bg-success/5"
+            }`}
+          >
+            {last.locked ? (
+              <Unlock className="mx-auto mb-2 h-6 w-6 text-warning" />
+            ) : (
+              <CheckCircle2 className="mx-auto mb-2 h-6 w-6 text-success" />
+            )}
             <div className="font-semibold">{last.full_name}</div>
             <div className="text-xs text-muted-foreground">
               {last.student_id} · {last.period_label} · marked {last.status}
             </div>
+            {last.locked && last.user_id && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="mt-3"
+                onClick={() => unlockStudent(last.user_id)}
+              >
+                <Unlock className="mr-2 h-4 w-4" /> Unlock QR
+              </Button>
+            )}
           </div>
         )}
       </Card>
