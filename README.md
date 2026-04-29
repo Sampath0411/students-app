@@ -22,11 +22,18 @@ A full-stack student management platform with separate **student** and **admin**
 
 ## Tech stack
 
-- **Frontend:** React 18, TypeScript, Vite, React Router
-- **UI:** Tailwind CSS, shadcn/ui, Radix UI, Lucide icons
-- **State/Data:** TanStack Query, Supabase JS client
-- **Backend:** Supabase (Postgres + Auth + RLS + Edge Functions)
-- **Testing:** Vitest + Testing Library
+| Symbol | Tech | Used in this repo |
+| --- | --- | --- |
+| ⚛️ | React 18 | App UI, page components, dashboards, and role-based screens |
+| 🟦 | TypeScript | Type-safe components, hooks, auth context, and Supabase integration |
+| ⚡ | Vite | Fast dev server and production bundling |
+| 🧭 | React Router | Public, student, and admin route navigation |
+| 🎨 | Tailwind CSS | Utility-first styling and design system tokens |
+| 🧩 | shadcn/ui + Radix UI | Reusable accessible UI components |
+| 📦 | TanStack Query | Query client provider and async data orchestration |
+| 🛢️ | Supabase (Auth + Postgres + RLS) | Authentication, database tables, and access control |
+| ☁️ | Supabase Edge Functions | `admin-create-student`, `chat-ai`, and `seed-admin` server logic |
+| 🧪 | Vitest + Testing Library | Unit/integration testing setup in `src/test` |
 
 ## Project structure
 
