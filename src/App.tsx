@@ -26,6 +26,8 @@ import AdminScan from "./pages/admin/AdminScan";
 import AdminAttendanceEdit from "./pages/admin/AdminAttendanceEdit";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
+import StudentChatbot from "./pages/student/Chatbot";
+import AdminSettings from "./pages/admin/AdminSettings";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
@@ -71,6 +73,8 @@ const App = () => (
             <Route path="/admin/edit-attendance" element={<ProtectedRoute requireRole="admin"><AdminAttendanceEdit /></ProtectedRoute>} />
             <Route path="/admin/reports" element={<ProtectedRoute requireRole="admin"><AdminAttendanceReports /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute requireRole="student"><StudentAttendanceHistory /></ProtectedRoute>} />
+            <Route path="/chatbot" element={<ProtectedRoute requireRole="student"><StudentChatbot /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute requireRole="admin"><AdminSettings /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

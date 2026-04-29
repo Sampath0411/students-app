@@ -38,6 +38,24 @@ export type Database = {
         }
         Relationships: []
       }
+      app_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value?: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       assignment_grades: {
         Row: {
           assignment_id: string
@@ -193,6 +211,86 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "chat_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_settings: {
+        Row: {
+          bot_name: string | null
+          created_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bot_name?: string | null
+          created_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bot_name?: string | null
+          created_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       login_codes: {
         Row: {
           code: string
@@ -266,6 +364,8 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          id_card_name: string | null
+          id_card_url: string | null
           last_profile_edit: string | null
           phone: string | null
           status: Database["public"]["Enums"]["profile_status"]
@@ -281,6 +381,8 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          id_card_name?: string | null
+          id_card_url?: string | null
           last_profile_edit?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["profile_status"]
@@ -296,6 +398,8 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          id_card_name?: string | null
+          id_card_url?: string | null
           last_profile_edit?: string | null
           phone?: string | null
           status?: Database["public"]["Enums"]["profile_status"]
