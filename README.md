@@ -22,18 +22,20 @@ A full-stack student management platform with separate **student** and **admin**
 
 ## Tech stack
 
-| Symbol | Tech | Used in this repo |
-| --- | --- | --- |
-| ⚛️ | React 18 | App UI, page components, dashboards, and role-based screens |
-| 🟦 | TypeScript | Type-safe components, hooks, auth context, and Supabase integration |
-| ⚡ | Vite | Fast dev server and production bundling |
-| 🧭 | React Router | Public, student, and admin route navigation |
-| 🎨 | Tailwind CSS | Utility-first styling and design system tokens |
-| 🧩 | shadcn/ui + Radix UI | Reusable accessible UI components |
-| 📦 | TanStack Query | Query client provider and async data orchestration |
-| 🛢️ | Supabase (Auth + Postgres + RLS) | Authentication, database tables, and access control |
-| ☁️ | Supabase Edge Functions | `admin-create-student`, `chat-ai`, and `seed-admin` server logic |
-| 🧪 | Vitest + Testing Library | Unit/integration testing setup in `src/test` |
+| Badge | Used in this repo for |
+| --- | --- |
+| ![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB) | Building all UI pages and reusable components |
+| ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white) | Type-safe frontend code, hooks, context, and Supabase integrations |
+| ![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white) | Local development server and production bundling |
+| ![React Router](https://img.shields.io/badge/React_Router-CA4245?style=for-the-badge&logo=react-router&logoColor=white) | Public/admin/student route navigation and protection flow |
+| ![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white) | Utility-first styling and responsive layout system |
+| ![shadcn/ui](https://img.shields.io/badge/shadcn/ui-111111?style=for-the-badge&logo=shadcnui&logoColor=white) | UI component layer for forms, dialogs, tables, and shells |
+| ![Radix UI](https://img.shields.io/badge/Radix_UI-161618?style=for-the-badge&logo=radixui&logoColor=white) | Accessible UI primitives used under shadcn components |
+| ![TanStack Query](https://img.shields.io/badge/TanStack_Query-FF4154?style=for-the-badge&logo=reactquery&logoColor=white) | Query client provider and async request orchestration |
+| ![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white) | Auth, Postgres database, RLS policies, and API access |
+| ![Supabase Edge Functions](https://img.shields.io/badge/Supabase_Edge_Functions-0F172A?style=for-the-badge&logo=supabase&logoColor=3FCF8E) | Server-side functions: `admin-create-student`, `chat-ai`, `seed-admin` |
+| ![Vitest](https://img.shields.io/badge/Vitest-6E9F18?style=for-the-badge&logo=vitest&logoColor=white) | Unit/integration test runner in `src/test` |
+| ![Testing Library](https://img.shields.io/badge/Testing_Library-E33332?style=for-the-badge&logo=testinglibrary&logoColor=white) | Component test utilities and assertions |
 
 ## Project structure
 
