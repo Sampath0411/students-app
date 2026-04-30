@@ -102,7 +102,36 @@ const AdminStudents = () => {
     setForm(empty); setOpen(false); load();
   };
 
-  const toggleLock = async (uid: string, currentlyLocked: boolean) => {
+  const openEdit = (r: any) => {
+    setEditForm({
+      id: r.id, email: r.email || "", password: "", full_name: r.full_name || "",
+      student_id: r.student_id || "", phone: r.phone || "", department: r.department || "",
+      date_of_birth: r.date_of_birth || "",
+    });
+    setEditOpen(true);
+  };
+
+  const onEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    setEditSaving(true);
+    const { data, error } = await supabase.functions.invoke("admin-create-student", {
+      body: { ...editForm, action: "update" },
+    });
+    setEditSaving(false);
+    if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Failed"); return; }
+    toast.success("Student updated"); setEditOpen(false); load();
+  };
+
+  const onDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("admin-create-student", {
+      body: { id: deleteId, action: "delete" },
+    });
+    setDeleting(false);
+    if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Failed"); return; }
+    toast.success("Student deleted"); setDeleteId(null); load();
+  };
     const { error } = await supabase
       .from("login_codes")
       .update({
