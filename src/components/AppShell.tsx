@@ -21,6 +21,7 @@ const studentMore = [
   { to: "/assignments", label: "Assignments", icon: FileText },
   { to: "/records", label: "Records", icon: BookOpen },
   { to: "/announcements", label: "Announcements", icon: Megaphone },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 const adminNavMain = [
   { to: "/admin", label: "Home", icon: LayoutDashboard },
@@ -33,9 +34,7 @@ const adminMore = [
   { to: "/admin/edit-attendance", label: "Edit attendance", icon: Pencil },
   { to: "/admin/reports", label: "Reports & Export", icon: FileSpreadsheet },
   { to: "/admin/timetable", label: "Timetable", icon: CalendarDays },
-  { to: "/admin/assignments", label: "Assignments", icon: FileText },
-  { to: "/admin/records", label: "Records", icon: BookOpen },
-  { to: "/admin/announcements", label: "Announcements", icon: Megaphone },
+  { to: "/admin/content", label: "Content hub", icon: FileText },
   { to: "/admin/settings", label: "Settings", icon: Settings },
 ];
 
