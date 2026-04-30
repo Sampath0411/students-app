@@ -5,25 +5,22 @@ import { GraduationCap, ShieldCheck, CalendarCheck, BarChart3, ArrowRight, Users
 const Landing = () => {
   return (
     <div className="min-h-screen">
-      <header className="container flex items-center justify-between py-6">
+      <header className="container flex items-center justify-between gap-4 py-6">
         <div className="flex items-center gap-2">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
             <GraduationCap className="h-5 w-5 text-primary-foreground" />
           </div>
           <span className="text-lg font-bold">Scholaris</span>
         </div>
-        <nav className="flex items-center gap-2">
-          <Link to="/admin/login">
-            <Button variant="ghost" size="sm">
-              <ShieldCheck className="mr-1 h-4 w-4" /> Admin
+        <nav className="flex flex-wrap items-center gap-2">
+          <Link to="/login">
+            <Button variant="outline" size="sm" className="gap-1">
+              <Users className="h-4 w-4" /> Student login
             </Button>
           </Link>
-          <Link to="/login">
-            <Button variant="ghost" size="sm">Sign in</Button>
-          </Link>
-          <Link to="/register">
-            <Button size="sm" className="gradient-primary text-primary-foreground hover:opacity-90">
-              Get started
+          <Link to="/admin/login">
+            <Button size="sm" className="gap-1 gradient-primary text-primary-foreground hover:opacity-90">
+              <ShieldCheck className="h-4 w-4" /> Admin login
             </Button>
           </Link>
         </nav>
