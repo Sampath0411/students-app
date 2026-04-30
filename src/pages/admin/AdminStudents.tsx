@@ -42,6 +42,11 @@ const AdminStudents = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFields, setExportFields] = useState<Set<string>>(new Set(ALL_FIELDS.map((f) => f.key)));
   const [exportScope, setExportScope] = useState<"all" | "selected">("all");
+  const [editForm, setEditForm] = useState(editEmpty);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const [{ data: profiles }, { data: lcs }] = await Promise.all([
