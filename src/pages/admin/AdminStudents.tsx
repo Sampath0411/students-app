@@ -132,6 +132,8 @@ const AdminStudents = () => {
     if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Failed"); return; }
     toast.success("Student deleted"); setDeleteId(null); load();
   };
+
+  const toggleLock = async (uid: string, currentlyLocked: boolean) => {
     const { error } = await supabase
       .from("login_codes")
       .update({
