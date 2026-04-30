@@ -9,11 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, UserPlus, Download, Lock, Unlock } from "lucide-react";
+import { Loader2, UserPlus, Download, Lock, Unlock, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const empty = { email: "", password: "", full_name: "", student_id: "", phone: "", department: "", date_of_birth: "" };
+const editEmpty = { id: "", email: "", password: "", full_name: "", student_id: "", phone: "", department: "", date_of_birth: "" };
 
 const ALL_FIELDS: { key: string; label: string; map: (r: any) => any }[] = [
   { key: "full_name", label: "Name", map: (r) => r.full_name },
