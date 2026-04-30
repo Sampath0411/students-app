@@ -27,7 +27,9 @@ import AdminAttendanceEdit from "./pages/admin/AdminAttendanceEdit";
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
 import StudentChatbot from "./pages/student/Chatbot";
+import StudentSettings from "./pages/student/Settings";
 import AdminSettings from "./pages/admin/AdminSettings";
+import AdminContent from "./pages/admin/AdminContent";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
