@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, FormEvent, useRef } from "react";
 import { AppShell } from "@/components/AppShell";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,9 +7,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
-import { Loader2, Lock, QrCode, ShieldCheck } from "lucide-react";
+import { Loader2, Lock, QrCode, ShieldCheck, Camera, Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import { AvatarPicker } from "@/components/Avatar";
+import { Avatar, AvatarPicker } from "@/components/Avatar";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -20,8 +20,12 @@ const Profile = () => {
   const [qrLocked, setQrLocked] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "", department: "", date_of_birth: "" });
   const [avatar, setAvatar] = useState({ style: "micah", seed: "" });
+  const [photoUrl, setPhotoUrl] = useState<string>("");
+  const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showPicker, setShowPicker] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
     if (!user) return;
@@ -40,21 +44,18 @@ const Profile = () => {
         date_of_birth: p.date_of_birth || "",
       });
       setAvatar({ style: (p as any).avatar_style || "micah", seed: (p as any).avatar_seed || p.id });
+      setPhotoUrl((p as any).avatar_url || "");
     }
     setLoading(false);
   };
 
-  useEffect(() => {
-    load();
-  }, [user]);
+  useEffect(() => { load(); }, [user]);
 
-  // Realtime: react when admin locks/unlocks the QR
   useEffect(() => {
     if (!user) return;
     const channel = supabase
       .channel("login_codes_self")
-      .on(
-        "postgres_changes",
+      .on("postgres_changes",
         { event: "UPDATE", schema: "public", table: "login_codes", filter: `user_id=eq.${user.id}` },
         (payload: any) => {
           setQrLocked(!!payload.new?.locked);
@@ -62,9 +63,7 @@ const Profile = () => {
         },
       )
       .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => { supabase.removeChannel(channel); };
   }, [user]);
 
   const lastEdit = profile?.last_profile_edit ? new Date(profile.last_profile_edit).getTime() : 0;
@@ -72,12 +71,35 @@ const Profile = () => {
   const canEdit = Date.now() >= nextEditAt;
   const daysLeft = Math.ceil((nextEditAt - Date.now()) / (24 * 60 * 60 * 1000));
 
+  const onPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) return toast.error("Pick an image file");
+    if (file.size > 4 * 1024 * 1024) return toast.error("Max 4 MB");
+    setUploading(true);
+    const ext = file.name.split(".").pop() || "jpg";
+    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    if (upErr) { toast.error(upErr.message); setUploading(false); return; }
+    const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
+    const url = `${pub.publicUrl}?t=${Date.now()}`;
+    const { error: updErr } = await supabase.from("profiles").update({ avatar_url: url } as any).eq("id", user.id);
+    setUploading(false);
+    if (updErr) toast.error(updErr.message);
+    else { setPhotoUrl(url); toast.success("Photo updated"); }
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const removePhoto = async () => {
+    if (!user) return;
+    const { error } = await supabase.from("profiles").update({ avatar_url: null } as any).eq("id", user.id);
+    if (error) toast.error(error.message);
+    else { setPhotoUrl(""); toast.success("Photo removed"); }
+  };
+
   const onSave = async (e: FormEvent) => {
     e.preventDefault();
-    if (!canEdit) {
-      toast.error(`You can edit again in ${daysLeft} day(s).`);
-      return;
-    }
+    if (!canEdit) { toast.error(`You can edit again in ${daysLeft} day(s).`); return; }
     setSaving(true);
     const { error } = await supabase
       .from("profiles")
@@ -93,10 +115,7 @@ const Profile = () => {
       .eq("id", user!.id);
     setSaving(false);
     if (error) toast.error(error.message);
-    else {
-      toast.success("Profile updated");
-      load();
-    }
+    else { toast.success("Profile updated"); load(); }
   };
 
   if (loading) {
@@ -122,34 +141,46 @@ const Profile = () => {
           <h2 className="mb-4 text-lg font-semibold">Your information</h2>
           <form onSubmit={onSave} className="space-y-6">
             <div>
-              <Label className="mb-2 block">Avatar</Label>
-              <AvatarPicker value={avatar} onChange={setAvatar} disabled={!canEdit} />
+              <Label className="mb-2 block">Profile picture</Label>
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="relative">
+                  {photoUrl ? (
+                    <img src={photoUrl} alt="profile" className="h-24 w-24 rounded-2xl object-cover ring-2 ring-border" />
+                  ) : (
+                    <Avatar style={avatar.style} seed={avatar.seed} size={96} />
+                  )}
+                  {photoUrl && (
+                    <button type="button" onClick={removePhoto} title="Remove photo"
+                      className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <input ref={fileRef} type="file" accept="image/*" hidden onChange={onPhotoChange} />
+                  <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                    {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
+                    {photoUrl ? "Change photo" : "Upload photo"}
+                  </Button>
+                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowPicker((s) => !s)}>
+                    {showPicker ? "Hide avatars" : "Or pick a generated avatar"}
+                  </Button>
+                </div>
+              </div>
+              {showPicker && (
+                <div className="mt-4 rounded-lg border border-border p-4">
+                  <AvatarPicker value={avatar} onChange={setAvatar} disabled={!canEdit} />
+                  <p className="mt-2 text-[11px] text-muted-foreground">Tip: uploading a photo overrides the generated avatar.</p>
+                </div>
+              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <Label>Email (locked)</Label>
-                <Input value={profile?.email || ""} disabled />
-              </div>
-              <div>
-                <Label>Student ID (locked)</Label>
-                <Input value={profile?.student_id || ""} disabled />
-              </div>
-              <div>
-                <Label htmlFor="full_name">Full name</Label>
-                <Input id="full_name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} disabled={!canEdit} />
-              </div>
-              <div>
-                <Label htmlFor="phone">Phone</Label>
-                <Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={!canEdit} />
-              </div>
-              <div>
-                <Label htmlFor="department">Department</Label>
-                <Input id="department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} disabled={!canEdit} />
-              </div>
-              <div>
-                <Label htmlFor="dob">Date of birth</Label>
-                <Input id="dob" type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} disabled={!canEdit} />
-              </div>
+              <div><Label>Email (locked)</Label><Input value={profile?.email || ""} disabled /></div>
+              <div><Label>Student ID (locked)</Label><Input value={profile?.student_id || ""} disabled /></div>
+              <div><Label htmlFor="full_name">Full name</Label><Input id="full_name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} disabled={!canEdit} /></div>
+              <div><Label htmlFor="phone">Phone</Label><Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={!canEdit} /></div>
+              <div><Label htmlFor="department">Department</Label><Input id="department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} disabled={!canEdit} /></div>
+              <div><Label htmlFor="dob">Date of birth</Label><Input id="dob" type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} disabled={!canEdit} /></div>
             </div>
             {!canEdit && (
               <div className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 p-3 text-sm text-warning">
@@ -168,7 +199,7 @@ const Profile = () => {
             <QrCode className="h-5 w-5 text-primary" /> Session QR
           </h2>
           <p className="mb-4 text-xs text-muted-foreground">
-            New code generated each login. Show this to admin for attendance.
+            Show this to admin for attendance.
           </p>
           {code ? (
             <div className="flex flex-col items-center gap-3">
@@ -184,12 +215,6 @@ const Profile = () => {
                     </span>
                   </div>
                 )}
-              </div>
-              <div className="text-center">
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Session code</div>
-                <div className={`font-mono text-lg font-bold tracking-widest ${qrLocked ? "blur-sm select-none" : ""}`}>
-                  {code}
-                </div>
               </div>
               {qrLocked ? (
                 <div className="flex items-center gap-2 rounded-md border border-warning/30 bg-warning/5 px-3 py-2 text-xs text-warning">
