@@ -1,4 +1,4 @@
-// Edge function: admin creates a student account (auto-approved)
+// Edge function: admin manages student accounts (create / update / delete)
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const cors = {
@@ -14,7 +14,6 @@ Deno.serve(async (req) => {
     const svc = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const auth = req.headers.get("Authorization") || "";
 
-    // Verify caller is admin
     const userClient = createClient(url, anon, { global: { headers: { Authorization: auth } } });
     const { data: udata, error: uerr } = await userClient.auth.getUser();
     if (uerr || !udata.user) return new Response(JSON.stringify({ error: "Not signed in" }), { status: 401, headers: cors });
@@ -26,6 +25,43 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
+    const action = body.action || "create";
+
+    if (action === "delete") {
+      const { id } = body;
+      if (!id) return new Response(JSON.stringify({ error: "Missing id" }), { status: 400, headers: cors });
+      const { error: dErr } = await admin.auth.admin.deleteUser(id);
+      if (dErr) return new Response(JSON.stringify({ error: dErr.message }), { status: 400, headers: cors });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    if (action === "update") {
+      const { id, full_name, email, student_id, phone, department, date_of_birth, password } = body;
+      if (!id) return new Response(JSON.stringify({ error: "Missing id" }), { status: 400, headers: cors });
+      // Update auth email/password if provided
+      const authPatch: any = {};
+      if (email) authPatch.email = email;
+      if (password) authPatch.password = password;
+      if (Object.keys(authPatch).length) {
+        const { error: aErr } = await admin.auth.admin.updateUserById(id, authPatch);
+        if (aErr) return new Response(JSON.stringify({ error: aErr.message }), { status: 400, headers: cors });
+      }
+      const { error: pErr } = await admin
+        .from("profiles")
+        .update({
+          full_name,
+          email: email ?? undefined,
+          student_id,
+          phone: phone || null,
+          department: department || null,
+          date_of_birth: date_of_birth || null,
+        })
+        .eq("id", id);
+      if (pErr) return new Response(JSON.stringify({ error: pErr.message }), { status: 400, headers: cors });
+      return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });
+    }
+
+    // create
     const { email, password, full_name, student_id, phone, department, date_of_birth } = body;
     if (!email || !password || !full_name || !student_id) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400, headers: cors });
@@ -39,7 +75,6 @@ Deno.serve(async (req) => {
     });
     if (cerr) return new Response(JSON.stringify({ error: cerr.message }), { status: 400, headers: cors });
 
-    // Auto-approve the new student profile
     await admin.from("profiles").update({ status: "approved" }).eq("id", created.user!.id);
 
     return new Response(JSON.stringify({ ok: true, id: created.user!.id }), {
