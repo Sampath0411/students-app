@@ -9,11 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Loader2, UserPlus, Download, Lock, Unlock } from "lucide-react";
+import { Loader2, UserPlus, Download, Lock, Unlock, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const empty = { email: "", password: "", full_name: "", student_id: "", phone: "", department: "", date_of_birth: "" };
+const editEmpty = { id: "", email: "", password: "", full_name: "", student_id: "", phone: "", department: "", date_of_birth: "" };
 
 const ALL_FIELDS: { key: string; label: string; map: (r: any) => any }[] = [
   { key: "full_name", label: "Name", map: (r) => r.full_name },
@@ -37,6 +42,11 @@ const AdminStudents = () => {
   const [exportOpen, setExportOpen] = useState(false);
   const [exportFields, setExportFields] = useState<Set<string>>(new Set(ALL_FIELDS.map((f) => f.key)));
   const [exportScope, setExportScope] = useState<"all" | "selected">("all");
+  const [editForm, setEditForm] = useState(editEmpty);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = async () => {
     const [{ data: profiles }, { data: lcs }] = await Promise.all([
@@ -90,6 +100,37 @@ const AdminStudents = () => {
     if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Failed"); return; }
     toast.success("Student created");
     setForm(empty); setOpen(false); load();
+  };
+
+  const openEdit = (r: any) => {
+    setEditForm({
+      id: r.id, email: r.email || "", password: "", full_name: r.full_name || "",
+      student_id: r.student_id || "", phone: r.phone || "", department: r.department || "",
+      date_of_birth: r.date_of_birth || "",
+    });
+    setEditOpen(true);
+  };
+
+  const onEdit = async (e: FormEvent) => {
+    e.preventDefault();
+    setEditSaving(true);
+    const { data, error } = await supabase.functions.invoke("admin-create-student", {
+      body: { ...editForm, action: "update" },
+    });
+    setEditSaving(false);
+    if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Failed"); return; }
+    toast.success("Student updated"); setEditOpen(false); load();
+  };
+
+  const onDelete = async () => {
+    if (!deleteId) return;
+    setDeleting(true);
+    const { data, error } = await supabase.functions.invoke("admin-create-student", {
+      body: { id: deleteId, action: "delete" },
+    });
+    setDeleting(false);
+    if (error || (data as any)?.error) { toast.error((data as any)?.error || error?.message || "Failed"); return; }
+    toast.success("Student deleted"); setDeleteId(null); load();
   };
 
   const toggleLock = async (uid: string, currentlyLocked: boolean) => {
@@ -199,6 +240,7 @@ const AdminStudents = () => {
               <TableHead>Department</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>QR</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -220,15 +262,64 @@ const AdminStudents = () => {
                       </Button>
                     ) : <span className="text-xs text-muted-foreground">no code</span>}
                   </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(r)} title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setDeleteId(r.id)} title="Delete">
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                 </TableRow>
               );
             })}
             {filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">No students found.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">No students found.</TableCell></TableRow>
             )}
           </TableBody>
         </Table>
       </Card>
+
+      {/* Edit dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit student</DialogTitle></DialogHeader>
+          <form onSubmit={onEdit} className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2"><Label>Full name</Label><Input required value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} /></div>
+            <div><Label>Email</Label><Input type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} /></div>
+            <div><Label>New password (optional)</Label><Input type="password" minLength={6} placeholder="Leave blank to keep" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} /></div>
+            <div><Label>Student ID</Label><Input required value={editForm.student_id} onChange={(e) => setEditForm({ ...editForm, student_id: e.target.value })} /></div>
+            <div><Label>Phone</Label><Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></div>
+            <div><Label>Department</Label><Input value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} /></div>
+            <div><Label>Date of birth</Label><Input type="date" value={editForm.date_of_birth} onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })} /></div>
+            <div className="sm:col-span-2 flex justify-end">
+              <Button type="submit" disabled={editSaving} className="gradient-primary text-primary-foreground">
+                {editSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Save
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete confirm */}
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this student?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently removes the account, profile and all linked data. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={onDelete} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              {deleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </AppShell>
   );
 };
