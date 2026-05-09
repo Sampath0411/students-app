@@ -3,12 +3,13 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
-  GraduationCap, LogOut, LayoutDashboard, Users, CalendarDays, ClipboardCheck,
+  LogOut, LayoutDashboard, Users, CalendarDays, ClipboardCheck,
   UserCheck, Bell, FileText, BookOpen, Megaphone, User, ScanLine, History,
-  FileSpreadsheet, Pencil, MessageCircle, Settings, MoreHorizontal,
+  FileSpreadsheet, MessageCircle, Settings, MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import logo from "@/assets/logo.png";
 
 const studentNav = [
   { to: "/dashboard", label: "Home", icon: LayoutDashboard },
@@ -31,7 +32,6 @@ const adminNavMain = [
 ];
 const adminMore = [
   { to: "/admin/attendance", label: "Attendance", icon: ClipboardCheck },
-  { to: "/admin/edit-attendance", label: "Edit attendance", icon: Pencil },
   { to: "/admin/reports", label: "Reports & Export", icon: FileSpreadsheet },
   { to: "/admin/timetable", label: "Timetable", icon: CalendarDays },
   { to: "/admin/content", label: "Content hub", icon: FileText },
@@ -57,11 +57,9 @@ export const AppShell = ({ children, kind }: { children: ReactNode; kind: "admin
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-card/40 p-4 md:flex">
         <Link to="/" className="mb-8 flex items-center gap-2 px-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="CS&SE App" className="h-9 w-9 rounded-lg" />
           <div>
-            <div className="text-sm font-bold">Scholaris</div>
+            <div className="text-sm font-bold">CS&amp;SE App</div>
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{kind} portal</div>
           </div>
         </Link>
@@ -95,10 +93,8 @@ export const AppShell = ({ children, kind }: { children: ReactNode; kind: "admin
         {/* Mobile header */}
         <header className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg gradient-primary">
-              <GraduationCap className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="font-bold">Scholaris</span>
+            <img src={logo} alt="CS&SE App" className="h-8 w-8 rounded-lg" />
+            <span className="font-bold">CS&amp;SE App</span>
           </Link>
           <Button variant="ghost" size="sm" onClick={onSignOut}>
             <LogOut className="h-4 w-4" />
