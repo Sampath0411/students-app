@@ -25,7 +25,7 @@ import AdminAssignments from "./pages/admin/AdminAssignments";
 import AdminRecords from "./pages/admin/AdminRecords";
 import AdminAnnouncements from "./pages/admin/AdminAnnouncements";
 import AdminScan from "./pages/admin/AdminScan";
-import AdminAttendanceEdit from "./pages/admin/AdminAttendanceEdit";
+
 import AdminAttendanceReports from "./pages/admin/AdminAttendanceReports";
 import StudentAttendanceHistory from "./pages/student/AttendanceHistory";
 import StudentChatbot from "./pages/student/Chatbot";
