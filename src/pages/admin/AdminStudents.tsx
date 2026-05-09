@@ -23,7 +23,7 @@ const editEmpty = { id: "", email: "", password: "", full_name: "", student_id: 
 const ALL_FIELDS: { key: string; label: string; map: (r: any) => any }[] = [
   { key: "full_name", label: "Name", map: (r) => r.full_name },
   { key: "email", label: "Email", map: (r) => r.email },
-  { key: "student_id", label: "Student ID / Registration", map: (r) => r.student_id },
+  { key: "student_id", label: "Registration number", map: (r) => r.student_id },
   { key: "phone", label: "Phone", map: (r) => r.phone || "" },
   { key: "department", label: "Department", map: (r) => r.department || "" },
   { key: "date_of_birth", label: "Date of birth", map: (r) => r.date_of_birth || "" },
@@ -213,7 +213,7 @@ const AdminStudents = () => {
                 <div className="sm:col-span-2"><Label>Full name</Label><Input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} /></div>
                 <div><Label>Email</Label><Input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></div>
                 <div><Label>Temp password</Label><Input required minLength={6} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} /></div>
-                <div><Label>Student ID</Label><Input required value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} /></div>
+                <div><Label>Registration number</Label><Input required value={form.student_id} onChange={(e) => setForm({ ...form, student_id: e.target.value })} /></div>
                 <div><Label>Phone</Label><Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
                 <div><Label>Department</Label><Input value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} /></div>
                 <div><Label>Date of birth</Label><Input type="date" value={form.date_of_birth} onChange={(e) => setForm({ ...form, date_of_birth: e.target.value })} /></div>
@@ -236,7 +236,7 @@ const AdminStudents = () => {
               </TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Student ID</TableHead>
+              <TableHead>Reg. number</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Status</TableHead>
               <TableHead>QR</TableHead>
@@ -290,7 +290,7 @@ const AdminStudents = () => {
             <div className="sm:col-span-2"><Label>Full name</Label><Input required value={editForm.full_name} onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })} /></div>
             <div><Label>Email</Label><Input type="email" required value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} /></div>
             <div><Label>New password (optional)</Label><Input type="password" minLength={6} placeholder="Leave blank to keep" value={editForm.password} onChange={(e) => setEditForm({ ...editForm, password: e.target.value })} /></div>
-            <div><Label>Student ID</Label><Input required value={editForm.student_id} onChange={(e) => setEditForm({ ...editForm, student_id: e.target.value })} /></div>
+            <div><Label>Registration number</Label><Input required value={editForm.student_id} onChange={(e) => setEditForm({ ...editForm, student_id: e.target.value })} /></div>
             <div><Label>Phone</Label><Input value={editForm.phone} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} /></div>
             <div><Label>Department</Label><Input value={editForm.department} onChange={(e) => setEditForm({ ...editForm, department: e.target.value })} /></div>
             <div><Label>Date of birth</Label><Input type="date" value={editForm.date_of_birth} onChange={(e) => setEditForm({ ...editForm, date_of_birth: e.target.value })} /></div>
