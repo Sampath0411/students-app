@@ -55,7 +55,7 @@ const AdminPending = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Student ID</TableHead>
+                <TableHead>Reg. number</TableHead>
                 <TableHead>Department</TableHead>
                 <TableHead>ID card</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
