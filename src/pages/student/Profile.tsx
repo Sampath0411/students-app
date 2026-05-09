@@ -40,7 +40,7 @@ const Profile = () => {
         department: p.department || "",
         date_of_birth: p.date_of_birth || "",
       });
-      setAvatar({ style: (p as any).avatar_style || "micah", seed: (p as any).avatar_seed || p.id });
+      
       setPhotoUrl((p as any).avatar_url || "");
     }
     setLoading(false);
@@ -105,8 +105,6 @@ const Profile = () => {
         phone: form.phone || null,
         department: form.department || null,
         date_of_birth: form.date_of_birth || null,
-        avatar_style: avatar.style,
-        avatar_seed: avatar.seed,
         last_profile_edit: new Date().toISOString(),
       } as any)
       .eq("id", user!.id);
