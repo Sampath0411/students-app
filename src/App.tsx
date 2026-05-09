@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { OfflineWatcher } from "@/components/OfflineWatcher";
+import Offline from "./pages/Offline";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -41,8 +43,11 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <OfflineWatcher />
           <Routes>
             <Route path="/" element={<Landing />} />
+            <Route path="/offline" element={<Offline />} />
+            <Route path="/register" element={<Register />} />
             <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<Login admin />} />
@@ -72,7 +77,7 @@ const App = () => (
             <Route path="/admin/assignments" element={<ProtectedRoute requireRole="admin"><AdminAssignments /></ProtectedRoute>} />
             <Route path="/admin/records" element={<ProtectedRoute requireRole="admin"><AdminRecords /></ProtectedRoute>} />
             <Route path="/admin/announcements" element={<ProtectedRoute requireRole="admin"><AdminAnnouncements /></ProtectedRoute>} />
-            <Route path="/admin/edit-attendance" element={<ProtectedRoute requireRole="admin"><AdminAttendanceEdit /></ProtectedRoute>} />
+            <Route path="/admin/edit-attendance" element={<Navigate to="/admin/attendance" replace />} />
             <Route path="/admin/reports" element={<ProtectedRoute requireRole="admin"><AdminAttendanceReports /></ProtectedRoute>} />
             <Route path="/attendance" element={<ProtectedRoute requireRole="student"><StudentAttendanceHistory /></ProtectedRoute>} />
             <Route path="/chatbot" element={<ProtectedRoute requireRole="student"><StudentChatbot /></ProtectedRoute>} />
