@@ -18,12 +18,10 @@ const Profile = () => {
   const [code, setCode] = useState<string>("");
   const [qrLocked, setQrLocked] = useState(false);
   const [form, setForm] = useState({ full_name: "", phone: "", department: "", date_of_birth: "" });
-  const [avatar, setAvatar] = useState({ style: "micah", seed: "" });
   const [photoUrl, setPhotoUrl] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showPicker, setShowPicker] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const load = async () => {
