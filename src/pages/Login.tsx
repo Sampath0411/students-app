@@ -1,40 +1,48 @@
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { GraduationCap, Loader2, Wrench } from "lucide-react";
+import { Loader2, Wrench, KeyRound, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import logo from "@/assets/logo.png";
+
+const ADMIN_EMAIL = "sampathlox@gmail.com";
 
 const Login = ({ admin = false }: { admin?: boolean }) => {
   const navigate = useNavigate();
   const { enabled: maintenance } = useMaintenanceMode();
-  const [email, setEmail] = useState(admin ? "admin@demo.com" : "");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) { setLoading(false); toast.error(error.message); return; }
+  // Admin-specific OTP state
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [adminPwd, setAdminPwd] = useState("");
 
-    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", data.user.id);
+  // Ensure the master admin account exists once.
+  useEffect(() => {
+    if (admin) {
+      supabase.functions.invoke("seed-admin").catch(() => {});
+    }
+  }, [admin]);
+
+  const finalizeLogin = async (userId: string) => {
+    const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isAdmin = roles?.some((r) => r.role === "admin");
-
-    // Maintenance: only admins allowed
     if (maintenance && !isAdmin) {
       await supabase.auth.signOut();
-      setLoading(false);
       toast.error("System is under maintenance. Please try again later.");
       return;
     }
-
-    setLoading(false);
     if (admin && !isAdmin) {
       await supabase.auth.signOut();
       toast.error("This account is not an admin.");
@@ -43,7 +51,7 @@ const Login = ({ admin = false }: { admin?: boolean }) => {
     if (!isAdmin) {
       const code = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10)).join("");
       await supabase.from("login_codes").upsert(
-        { user_id: data.user.id, code, generated_at: new Date().toISOString(), locked: false, locked_at: null, locked_reason: null },
+        { user_id: userId, code, generated_at: new Date().toISOString(), locked: false, locked_at: null, locked_reason: null },
         { onConflict: "user_id" },
       );
     }
@@ -51,10 +59,54 @@ const Login = ({ admin = false }: { admin?: boolean }) => {
     navigate(isAdmin ? "/admin" : "/dashboard");
   };
 
-  const seedAdmin = async () => {
-    const { data, error } = await supabase.functions.invoke("seed-admin");
-    if (error) toast.error(error.message);
-    else toast.success(`Admin ready. Email: ${data.email} • Password: ${data.password}`);
+  const onStudentSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setLoading(false);
+    if (error) return toast.error(error.message);
+    await finalizeLogin(data.user.id);
+  };
+
+  const sendAdminOtp = async () => {
+    setOtpSending(true);
+    // Make sure the admin account exists before requesting an OTP.
+    await supabase.functions.invoke("seed-admin").catch(() => {});
+    const { error } = await supabase.auth.signInWithOtp({
+      email: ADMIN_EMAIL,
+      options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/admin` },
+    });
+    setOtpSending(false);
+    if (error) return toast.error(error.message);
+    setOtpSent(true);
+    toast.success(`Code sent to ${ADMIN_EMAIL}`);
+  };
+
+  const verifyAdminOtp = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!otp.trim()) return toast.error("Enter the code from your email");
+    setOtpVerifying(true);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: ADMIN_EMAIL,
+      token: otp.trim(),
+      type: "email",
+    });
+    setOtpVerifying(false);
+    if (error || !data.user) return toast.error(error?.message || "Invalid code");
+    await finalizeLogin(data.user.id);
+  };
+
+  const onAdminPwdSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    await supabase.functions.invoke("seed-admin").catch(() => {});
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: ADMIN_EMAIL,
+      password: adminPwd,
+    });
+    setLoading(false);
+    if (error || !data.user) return toast.error(error?.message || "Invalid password");
+    await finalizeLogin(data.user.id);
   };
 
   if (maintenance && !admin) {
@@ -71,44 +123,128 @@ const Login = ({ admin = false }: { admin?: boolean }) => {
   }
 
   return (
-    <div className="container flex min-h-screen items-center justify-center">
-      <Card className="card-elevated w-full max-w-md p-8">
+    <div className="container flex min-h-screen items-center justify-center px-4 py-10">
+      <Card className="card-elevated w-full max-w-md p-6 sm:p-8">
         <Link to="/" className="mb-6 flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="font-bold">Scholaris</span>
+          <img src={logo} alt="CS&SE App" className="h-9 w-9 rounded-lg" />
+          <span className="font-bold">CS&amp;SE App</span>
         </Link>
-        <h1 className="mb-1 text-2xl font-bold">{admin ? "Admin sign in" : "Welcome back"}</h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          {admin ? "Restricted to administrators." : "Sign in to your student dashboard."}
-        </p>
-        <form onSubmit={onSubmit} className="space-y-4">
-          <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-          </div>
-          <div>
-            <Label htmlFor="password">Password</Label>
-            <PasswordInput id="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-          </div>
-          <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Sign in
-          </Button>
-        </form>
+
         {admin ? (
-          <div className="mt-6 space-y-3 text-center text-sm">
-            <button onClick={seedAdmin} className="text-primary hover:underline">Seed / reset demo admin</button>
-            <p className="text-muted-foreground">
-              Default: <code className="rounded bg-muted px-1.5 py-0.5">admin@demo.com</code> /{" "}
-              <code className="rounded bg-muted px-1.5 py-0.5">Admin@12345</code>
-            </p>
-          </div>
+          <>
+            <h1 className="mb-1 text-2xl font-bold">Admin sign in</h1>
+            <p className="mb-6 text-sm text-muted-foreground">Restricted to administrators only.</p>
+
+            <Tabs defaultValue="code" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="code"><Mail className="mr-1.5 h-4 w-4" /> Email code</TabsTrigger>
+                <TabsTrigger value="password"><KeyRound className="mr-1.5 h-4 w-4" /> Password</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="code" className="mt-5">
+                {!otpSent ? (
+                  <div className="space-y-4 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      A one-time code will be sent to{" "}
+                      <span className="font-medium text-foreground">{ADMIN_EMAIL}</span>.
+                    </p>
+                    <Button
+                      onClick={sendAdminOtp}
+                      disabled={otpSending}
+                      className="w-full gradient-primary text-primary-foreground hover:opacity-90"
+                    >
+                      {otpSending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Send code
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={verifyAdminOtp} className="space-y-4">
+                    <div>
+                      <Label htmlFor="otp">Enter 6-digit code</Label>
+                      <Input
+                        id="otp"
+                        inputMode="numeric"
+                        autoComplete="one-time-code"
+                        maxLength={6}
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                        className="text-center text-lg tracking-[0.5em]"
+                        required
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={otpVerifying}
+                      className="w-full gradient-primary text-primary-foreground hover:opacity-90"
+                    >
+                      {otpVerifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Verify & sign in
+                    </Button>
+                    <button
+                      type="button"
+                      onClick={sendAdminOtp}
+                      disabled={otpSending}
+                      className="w-full text-xs text-primary hover:underline"
+                    >
+                      {otpSending ? "Sending…" : "Resend code"}
+                    </button>
+                  </form>
+                )}
+              </TabsContent>
+
+              <TabsContent value="password" className="mt-5">
+                <form onSubmit={onAdminPwdSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="apwd">Admin password</Label>
+                    <PasswordInput
+                      id="apwd"
+                      value={adminPwd}
+                      onChange={(e) => setAdminPwd(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Fallback when email code isn't available.
+                    </p>
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full gradient-primary text-primary-foreground hover:opacity-90"
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign in
+                  </Button>
+                </form>
+              </TabsContent>
+            </Tabs>
+          </>
         ) : (
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            New here? <Link to="/register" className="text-primary hover:underline">Create an account</Link>
-          </p>
+          <>
+            <h1 className="mb-1 text-2xl font-bold">Welcome back</h1>
+            <p className="mb-6 text-sm text-muted-foreground">Sign in to your student dashboard.</p>
+            <form onSubmit={onStudentSubmit} className="space-y-4">
+              <div>
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              </div>
+              <div>
+                <Label htmlFor="password">Password</Label>
+                <PasswordInput id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              </div>
+              <Button
+                type="submit"
+                className="w-full gradient-primary text-primary-foreground hover:opacity-90"
+                disabled={loading}
+              >
+                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Sign in
+              </Button>
+            </form>
+            <p className="mt-6 text-center text-sm text-muted-foreground">
+              New here? <Link to="/register" className="text-primary hover:underline">Create an account</Link>
+            </p>
+          </>
         )}
       </Card>
     </div>
