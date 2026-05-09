@@ -146,7 +146,9 @@ const Profile = () => {
                   {photoUrl ? (
                     <img src={photoUrl} alt="profile" className="h-24 w-24 rounded-2xl object-cover ring-2 ring-border" />
                   ) : (
-                    <Avatar style={avatar.style} seed={avatar.seed} size={96} />
+                    <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-dashed border-border bg-muted/40 text-muted-foreground">
+                      <UserIcon className="h-8 w-8" />
+                    </div>
                   )}
                   {photoUrl && (
                     <button type="button" onClick={removePhoto} title="Remove photo"
@@ -161,21 +163,13 @@ const Profile = () => {
                     {uploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Camera className="mr-2 h-4 w-4" />}
                     {photoUrl ? "Change photo" : "Upload photo"}
                   </Button>
-                  <Button type="button" variant="ghost" size="sm" onClick={() => setShowPicker((s) => !s)}>
-                    {showPicker ? "Hide avatars" : "Or pick a generated avatar"}
-                  </Button>
+                  <p className="text-[11px] text-muted-foreground">JPG/PNG, max 4 MB.</p>
                 </div>
               </div>
-              {showPicker && (
-                <div className="mt-4 rounded-lg border border-border p-4">
-                  <AvatarPicker value={avatar} onChange={setAvatar} disabled={!canEdit} />
-                  <p className="mt-2 text-[11px] text-muted-foreground">Tip: uploading a photo overrides the generated avatar.</p>
-                </div>
-              )}
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div><Label>Email (locked)</Label><Input value={profile?.email || ""} disabled /></div>
-              <div><Label>Student ID (locked)</Label><Input value={profile?.student_id || ""} disabled /></div>
+              <div><Label>Registration number (locked)</Label><Input value={profile?.student_id || ""} disabled /></div>
               <div><Label htmlFor="full_name">Full name</Label><Input id="full_name" value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} disabled={!canEdit} /></div>
               <div><Label htmlFor="phone">Phone</Label><Input id="phone" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} disabled={!canEdit} /></div>
               <div><Label htmlFor="department">Department</Label><Input id="department" value={form.department} onChange={(e) => setForm({ ...form, department: e.target.value })} disabled={!canEdit} /></div>
