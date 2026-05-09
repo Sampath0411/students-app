@@ -1,16 +1,15 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { GraduationCap, ShieldCheck, CalendarCheck, BarChart3, ArrowRight, Users } from "lucide-react";
+import { ShieldCheck, CalendarCheck, BarChart3, ArrowRight, Users } from "lucide-react";
+import logo from "@/assets/logo.png";
 
 const Landing = () => {
   return (
     <div className="min-h-screen">
       <header className="container flex items-center justify-between gap-4 py-6">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg gradient-primary">
-            <GraduationCap className="h-5 w-5 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-bold">Scholaris</span>
+          <img src={logo} alt="CS&SE App" className="h-9 w-9 rounded-lg" />
+          <span className="text-lg font-bold">CS&amp;SE App</span>
         </div>
         <nav className="flex flex-wrap items-center gap-2">
           <Link to="/login">
@@ -71,7 +70,7 @@ const Landing = () => {
       </section>
 
       <footer className="container border-t border-border py-8 text-center text-sm text-muted-foreground">
-        © {new Date().getFullYear()} Scholaris — Crafted for great schools.
+        © {new Date().getFullYear()} CS&amp;SE App — Crafted for great schools.
       </footer>
     </div>
   );
