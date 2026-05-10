@@ -62,9 +62,8 @@ const Register = () => {
     if (!parsed.success) { toast.error(parsed.error.errors[0].message); return; }
 
     setLoading(true);
-    const { data: existing } = await supabase
-      .from("profiles").select("id").eq("student_id", form.student_id.trim()).maybeSingle();
-    if (existing) { setLoading(false); toast.error("That registration number is already registered."); return; }
+    const { data: taken } = await supabase.rpc("student_id_taken" as any, { _sid: form.student_id.trim() });
+    if (taken) { setLoading(false); toast.error("That registration number is already registered."); return; }
 
     const { error } = await supabase.auth.signUp({
       email: form.email.trim(),
