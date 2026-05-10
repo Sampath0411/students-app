@@ -60,31 +60,43 @@ const Register = () => {
 
     const parsed = schema.safeParse(form);
     if (!parsed.success) { toast.error(parsed.error.errors[0].message); return; }
+    const email = parsed.data.email.trim().toLowerCase();
+    const registrationNumber = parsed.data.student_id.trim();
 
     setLoading(true);
-    const { data: taken } = await supabase.rpc("student_id_taken" as any, { _sid: form.student_id.trim() });
+    const { data: taken, error: checkError } = await supabase.rpc("student_id_taken" as any, { _sid: registrationNumber });
+    if (checkError) {
+      setLoading(false);
+      toast.error("Could not verify registration number. Please try again.");
+      return;
+    }
     if (taken) { setLoading(false); toast.error("That registration number is already registered."); return; }
 
     const { error } = await supabase.auth.signUp({
-      email: form.email.trim(),
+      email,
       password: form.password,
       options: {
         // emailRedirectTo intentionally omitted — we want OTP code, not link
         data: {
-          full_name: form.full_name.trim(),
-          student_id: form.student_id.trim(),
-          phone: form.phone.trim(),
-          department: form.department.trim(),
-          date_of_birth: form.date_of_birth,
+          full_name: parsed.data.full_name.trim(),
+          student_id: registrationNumber,
+          phone: parsed.data.phone?.trim() || "",
+          department: parsed.data.department?.trim() || "",
+          date_of_birth: parsed.data.date_of_birth || "",
         },
       },
     });
     setLoading(false);
     if (error) {
-      toast.error(/duplicate|already/i.test(error.message) ? "Account with this email exists." : error.message);
+      const message = /database error saving new user/i.test(error.message)
+        ? "This registration could not be created. Please check the registration number and try again."
+        : /duplicate|already/i.test(error.message)
+          ? "Account with this email exists."
+          : error.message;
+      toast.error(message);
       return;
     }
-    toast.success(`We sent a 6-digit code to ${form.email.trim()}`);
+    toast.success(`We sent a 6-digit code to ${email}`);
     setOtpStep(true);
   };
 
