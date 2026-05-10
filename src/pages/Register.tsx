@@ -7,9 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
-import { Loader2, Upload, Wrench, Camera, X } from "lucide-react";
+import { Loader2, Upload, Wrench, Camera, X, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
+import { ImageCropper } from "@/components/ImageCropper";
 import logo from "@/assets/logo.png";
 
 const schema = z.object({
@@ -27,27 +28,33 @@ const Register = () => {
   const { enabled: maintenance } = useMaintenanceMode();
   const [loading, setLoading] = useState(false);
   const [idCard, setIdCard] = useState<File | null>(null);
-  const [photo, setPhoto] = useState<File | null>(null);
+  const [photoBlob, setPhotoBlob] = useState<Blob | null>(null);
   const [photoPreview, setPhotoPreview] = useState<string>("");
+  const [cropFile, setCropFile] = useState<File | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState({
     full_name: "", email: "", password: "", student_id: "", phone: "", department: "", date_of_birth: "",
   });
 
+  // OTP verification step
+  const [otpStep, setOtpStep] = useState(false);
+  const [otp, setOtp] = useState("");
+  const [verifying, setVerifying] = useState(false);
+  const [resending, setResending] = useState(false);
+
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const onPhotoPick = (file: File | null) => {
-    if (!file) { setPhoto(null); setPhotoPreview(""); return; }
+    if (!file) { setPhotoBlob(null); setPhotoPreview(""); return; }
     if (!file.type.startsWith("image/")) { toast.error("Photo must be an image"); return; }
-    if (file.size > 4 * 1024 * 1024) { toast.error("Photo must be under 4 MB"); return; }
-    setPhoto(file);
-    setPhotoPreview(URL.createObjectURL(file));
+    if (file.size > 8 * 1024 * 1024) { toast.error("Photo must be under 8 MB"); return; }
+    setCropFile(file);
   };
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (maintenance) { toast.error("System is under maintenance. Please try again later."); return; }
-    if (!photo) { toast.error("Please upload a passport-size photo."); return; }
+    if (!photoBlob) { toast.error("Please upload a passport-size photo."); return; }
     if (!idCard) { toast.error("Please upload your Student ID card."); return; }
     if (idCard.size > 10 * 1024 * 1024) { toast.error("ID card must be under 10MB."); return; }
 
@@ -59,11 +66,11 @@ const Register = () => {
       .from("profiles").select("id").eq("student_id", form.student_id.trim()).maybeSingle();
     if (existing) { setLoading(false); toast.error("That registration number is already registered."); return; }
 
-    const { data: signUpData, error } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email: form.email.trim(),
       password: form.password,
       options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
+        // emailRedirectTo intentionally omitted — we want OTP code, not link
         data: {
           full_name: form.full_name.trim(),
           student_id: form.student_id.trim(),
@@ -73,43 +80,67 @@ const Register = () => {
         },
       },
     });
+    setLoading(false);
     if (error) {
-      setLoading(false);
       toast.error(/duplicate|already/i.test(error.message) ? "Account with this email exists." : error.message);
       return;
     }
-    const uid = signUpData.user?.id;
-    if (uid) {
-      // Upload passport photo → set as avatar
-      try {
-        const ext = (photo.name.split(".").pop() || "jpg").toLowerCase();
-        const photoPath = `${uid}/avatar-${Date.now()}.${ext}`;
-        const { error: pErr } = await supabase.storage.from("avatars").upload(photoPath, photo, {
-          upsert: true, contentType: photo.type,
-        });
-        if (!pErr) {
-          const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
-          await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
-        }
-      } catch (err) { console.error(err); }
+    toast.success(`We sent a 6-digit code to ${form.email.trim()}`);
+    setOtpStep(true);
+  };
 
-      // Upload ID card
-      try {
-        const ext = (idCard.name.split(".").pop() || "bin").toLowerCase();
-        const path = `${uid}/id-card.${ext}`;
-        const { error: upErr } = await supabase.storage.from("id-cards").upload(path, idCard, {
-          upsert: true, contentType: idCard.type,
-        });
-        if (upErr) {
-          toast.warning("Account created but ID card upload failed. Please re-upload from your profile.");
-        } else {
-          await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard.name }).eq("id", uid);
-        }
-      } catch (err) { console.error(err); }
+  const verifyAndUpload = async (e: FormEvent) => {
+    e.preventDefault();
+    if (otp.trim().length < 6) return toast.error("Enter the 6-digit code");
+    setVerifying(true);
+    const { data, error } = await supabase.auth.verifyOtp({
+      email: form.email.trim(),
+      token: otp.trim(),
+      type: "email",
+    });
+    if (error || !data.user) {
+      setVerifying(false);
+      return toast.error(error?.message || "Invalid or expired code");
     }
-    setLoading(false);
-    toast.success("Registration submitted! Pending admin approval.");
+    const uid = data.user.id;
+
+    // Upload passport photo → set as avatar
+    try {
+      const photoPath = `${uid}/avatar-${Date.now()}.jpg`;
+      const { error: pErr } = await supabase.storage.from("avatars").upload(photoPath, photoBlob!, {
+        upsert: true, contentType: "image/jpeg",
+      });
+      if (!pErr) {
+        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
+        await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
+      }
+    } catch (err) { console.error(err); }
+
+    // Upload ID card
+    try {
+      const ext = (idCard!.name.split(".").pop() || "bin").toLowerCase();
+      const path = `${uid}/id-card.${ext}`;
+      const { error: upErr } = await supabase.storage.from("id-cards").upload(path, idCard!, {
+        upsert: true, contentType: idCard!.type,
+      });
+      if (upErr) {
+        toast.warning("Account verified but ID card upload failed. Please re-upload from your profile.");
+      } else {
+        await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
+      }
+    } catch (err) { console.error(err); }
+
+    setVerifying(false);
+    toast.success("Email verified! Pending admin approval.");
     navigate("/dashboard");
+  };
+
+  const resendOtp = async () => {
+    setResending(true);
+    const { error } = await supabase.auth.resend({ type: "signup", email: form.email.trim() });
+    setResending(false);
+    if (error) toast.error(error.message);
+    else toast.success("New code sent");
   };
 
   if (maintenance) {
@@ -119,6 +150,45 @@ const Register = () => {
           <Wrench className="mx-auto mb-4 h-10 w-10 text-warning" />
           <h1 className="mb-2 text-2xl font-bold">Under maintenance</h1>
           <p className="text-muted-foreground">System is under maintenance. Please try again later.</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (otpStep) {
+    return (
+      <div className="container flex min-h-screen items-center justify-center px-4 py-10">
+        <Card className="card-elevated w-full max-w-md p-6 sm:p-8">
+          <div className="mb-6 flex items-center gap-2">
+            <img src={logo} alt="CS&SE App" className="h-9 w-9 rounded-lg" />
+            <span className="font-bold">CS&amp;SE App</span>
+          </div>
+          <div className="mb-5 flex items-center gap-2">
+            <Mail className="h-5 w-5 text-primary" />
+            <h1 className="text-2xl font-bold">Verify your email</h1>
+          </div>
+          <p className="mb-5 text-sm text-muted-foreground">
+            We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>.
+            Enter it below to finish creating your account.
+          </p>
+          <form onSubmit={verifyAndUpload} className="space-y-4">
+            <div>
+              <Label htmlFor="otp">6-digit code</Label>
+              <Input
+                id="otp" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
+                value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+                className="text-center text-lg tracking-[0.5em]" required
+              />
+            </div>
+            <Button type="submit" disabled={verifying} className="w-full gradient-primary text-primary-foreground hover:opacity-90">
+              {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Verify & finish
+            </Button>
+            <button type="button" onClick={resendOtp} disabled={resending}
+              className="w-full text-xs text-primary hover:underline">
+              {resending ? "Sending…" : "Resend code"}
+            </button>
+          </form>
         </Card>
       </div>
     );
@@ -135,7 +205,6 @@ const Register = () => {
         <p className="mb-6 text-sm text-muted-foreground">An admin will review your photo and ID card before approval.</p>
 
         <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
-          {/* Passport photo */}
           <div className="md:col-span-2">
             <Label className="mb-2 block">Passport-size photo</Label>
             <div className="flex flex-wrap items-center gap-4">
@@ -148,22 +217,20 @@ const Register = () => {
                   </div>
                 )}
                 {photoPreview && (
-                  <button
-                    type="button"
-                    onClick={() => onPhotoPick(null)}
+                  <button type="button" onClick={() => onPhotoPick(null)}
                     className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow"
-                    title="Remove"
-                  >
+                    title="Remove">
                     <X className="h-3 w-3" />
                   </button>
                 )}
               </div>
               <div className="flex flex-col gap-1">
-                <input ref={photoRef} type="file" accept="image/*" hidden onChange={(e) => onPhotoPick(e.target.files?.[0] || null)} />
+                <input ref={photoRef} type="file" accept="image/*" hidden
+                  onChange={(e) => onPhotoPick(e.target.files?.[0] || null)} />
                 <Button type="button" variant="outline" size="sm" onClick={() => photoRef.current?.click()}>
-                  <Camera className="mr-2 h-4 w-4" /> {photo ? "Change photo" : "Upload photo"}
+                  <Camera className="mr-2 h-4 w-4" /> {photoBlob ? "Change photo" : "Upload & crop"}
                 </Button>
-                <p className="text-[11px] text-muted-foreground">JPG/PNG, max 4 MB. Used as your profile picture.</p>
+                <p className="text-[11px] text-muted-foreground">JPG/PNG. You'll be able to crop it before submitting.</p>
               </div>
             </div>
           </div>
@@ -210,7 +277,7 @@ const Register = () => {
           <div className="md:col-span-2">
             <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Create account
+              Send verification code
             </Button>
           </div>
         </form>
@@ -218,6 +285,12 @@ const Register = () => {
           Already have an account? <Link to="/login" className="text-primary hover:underline">Sign in</Link>
         </p>
       </Card>
+
+      <ImageCropper
+        file={cropFile}
+        onClose={() => { setCropFile(null); if (photoRef.current) photoRef.current.value = ""; }}
+        onCropped={(blob, url) => { setPhotoBlob(blob); setPhotoPreview(url); }}
+      />
     </div>
   );
 };

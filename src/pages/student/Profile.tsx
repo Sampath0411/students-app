@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { Loader2, Lock, QrCode, ShieldCheck, Camera, X, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ImageCropper } from "@/components/ImageCropper";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -23,6 +24,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   const load = async () => {
     if (!user) return;
@@ -68,15 +70,21 @@ const Profile = () => {
   const canEdit = Date.now() >= nextEditAt;
   const daysLeft = Math.ceil((nextEditAt - Date.now()) / (24 * 60 * 60 * 1000));
 
-  const onPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
     if (!file.type.startsWith("image/")) return toast.error("Pick an image file");
-    if (file.size > 4 * 1024 * 1024) return toast.error("Max 4 MB");
+    if (file.size > 8 * 1024 * 1024) return toast.error("Max 8 MB");
+    setCropFile(file);
+  };
+
+  const uploadCropped = async (blob: Blob) => {
+    if (!user) return;
     setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, {
+      upsert: true, contentType: "image/jpeg",
+    });
     if (upErr) { toast.error(upErr.message); setUploading(false); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = `${pub.publicUrl}?t=${Date.now()}`;
@@ -220,6 +228,11 @@ const Profile = () => {
           )}
         </Card>
       </div>
+      <ImageCropper
+        file={cropFile}
+        onClose={() => { setCropFile(null); if (fileRef.current) fileRef.current.value = ""; }}
+        onCropped={(blob) => uploadCropped(blob)}
+      />
     </AppShell>
   );
 };
