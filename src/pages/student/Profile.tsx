@@ -24,6 +24,7 @@ const Profile = () => {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const fileRef = useRef<HTMLInputElement>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
 
   const load = async () => {
     if (!user) return;
