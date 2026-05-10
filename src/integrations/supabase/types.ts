@@ -513,6 +513,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      student_id_taken: { Args: { _sid: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "student"
