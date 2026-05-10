@@ -228,6 +228,11 @@ const Profile = () => {
           )}
         </Card>
       </div>
+      <ImageCropper
+        file={cropFile}
+        onClose={() => { setCropFile(null); if (fileRef.current) fileRef.current.value = ""; }}
+        onCropped={(blob) => uploadCropped(blob)}
+      />
     </AppShell>
   );
 };
