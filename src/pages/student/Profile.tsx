@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { QRCodeSVG } from "qrcode.react";
 import { Loader2, Lock, QrCode, ShieldCheck, Camera, X, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
+import { ImageCropper } from "@/components/ImageCropper";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
