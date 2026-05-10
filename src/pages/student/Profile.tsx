@@ -70,15 +70,21 @@ const Profile = () => {
   const canEdit = Date.now() >= nextEditAt;
   const daysLeft = Math.ceil((nextEditAt - Date.now()) / (24 * 60 * 60 * 1000));
 
-  const onPhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const onPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
     if (!file.type.startsWith("image/")) return toast.error("Pick an image file");
-    if (file.size > 4 * 1024 * 1024) return toast.error("Max 4 MB");
+    if (file.size > 8 * 1024 * 1024) return toast.error("Max 8 MB");
+    setCropFile(file);
+  };
+
+  const uploadCropped = async (blob: Blob) => {
+    if (!user) return;
     setUploading(true);
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `${user.id}/avatar-${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+    const path = `${user.id}/avatar-${Date.now()}.jpg`;
+    const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, {
+      upsert: true, contentType: "image/jpeg",
+    });
     if (upErr) { toast.error(upErr.message); setUploading(false); return; }
     const { data: pub } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = `${pub.publicUrl}?t=${Date.now()}`;
