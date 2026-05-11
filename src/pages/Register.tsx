@@ -6,12 +6,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Upload, Wrench, Camera, X, Mail } from "lucide-react";
+import { AlertCircle, Loader2, Upload, Wrench, Camera, X, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { ImageCropper } from "@/components/ImageCropper";
 import logo from "@/assets/logo.png";
+
+type SignupDiagnostic = {
+  stage: string;
+  summary: string;
+  details?: string;
+};
+
+const readableError = (error: unknown) => {
+  if (!error) return undefined;
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object") {
+    const source = error as Record<string, unknown>;
+    const parts = ["message", "code", "status", "name", "details", "hint"]
+      .map((key) => (source[key] ? `${key}: ${String(source[key])}` : ""))
+      .filter(Boolean);
+    if (parts.length) return parts.join(" | ");
+    try { return JSON.stringify(error); } catch { return String(error); }
+  }
+  return String(error);
+};
 
 const schema = z.object({
   full_name: z.string().trim().min(2, "Full name is too short").max(100),
@@ -32,6 +54,7 @@ const Register = () => {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [cropFile, setCropFile] = useState<File | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
+  const [signupDiagnostic, setSignupDiagnostic] = useState<SignupDiagnostic | null>(null);
   const [form, setForm] = useState({
     full_name: "", email: "", password: "", student_id: "", phone: "", department: "", date_of_birth: "",
   });
@@ -44,6 +67,11 @@ const Register = () => {
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const failSignup = (diagnostic: SignupDiagnostic, toastMessage?: string) => {
+    setSignupDiagnostic(diagnostic);
+    toast.error(toastMessage || diagnostic.summary);
+  };
+
   const onPhotoPick = (file: File | null) => {
     if (!file) { setPhotoBlob(null); setPhotoPreview(""); return; }
     if (!file.type.startsWith("image/")) { toast.error("Photo must be an image"); return; }
@@ -53,13 +81,17 @@ const Register = () => {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (maintenance) { toast.error("System is under maintenance. Please try again later."); return; }
-    if (!photoBlob) { toast.error("Please upload a passport-size photo."); return; }
-    if (!idCard) { toast.error("Please upload your Student ID card."); return; }
-    if (idCard.size > 10 * 1024 * 1024) { toast.error("ID card must be under 10MB."); return; }
+    setSignupDiagnostic(null);
+    if (maintenance) { failSignup({ stage: "Before submit", summary: "System is under maintenance." }, "System is under maintenance. Please try again later."); return; }
+    if (!photoBlob) { failSignup({ stage: "Photo validation", summary: "Passport-size photo is missing." }, "Please upload a passport-size photo."); return; }
+    if (!idCard) { failSignup({ stage: "ID card validation", summary: "Student ID card file is missing." }, "Please upload your Student ID card."); return; }
+    if (idCard.size > 10 * 1024 * 1024) { failSignup({ stage: "ID card validation", summary: "ID card file is larger than 10 MB.", details: `Selected size: ${(idCard.size / 1024 / 1024).toFixed(2)} MB` }, "ID card must be under 10MB."); return; }
 
     const parsed = schema.safeParse(form);
-    if (!parsed.success) { toast.error(parsed.error.errors[0].message); return; }
+    if (!parsed.success) {
+      failSignup({ stage: "Form validation", summary: parsed.error.errors[0].message, details: parsed.error.errors.map((err) => `${err.path.join(".")}: ${err.message}`).join(" | ") });
+      return;
+    }
     const email = parsed.data.email.trim().toLowerCase();
     const registrationNumber = parsed.data.student_id.trim();
 
@@ -67,10 +99,22 @@ const Register = () => {
     const { data: taken, error: checkError } = await supabase.rpc("student_id_taken" as any, { _sid: registrationNumber });
     if (checkError) {
       setLoading(false);
-      toast.error("Could not verify registration number. Please try again.");
+      failSignup({
+        stage: "Registration number duplicate check",
+        summary: "Could not verify whether this registration number is already used.",
+        details: readableError(checkError),
+      }, "Could not verify registration number. Please try again.");
       return;
     }
-    if (taken) { setLoading(false); toast.error("That registration number is already registered."); return; }
+    if (taken) {
+      setLoading(false);
+      failSignup({
+        stage: "Registration number duplicate check",
+        summary: "That registration number is already registered.",
+        details: `registration_number: ${registrationNumber}`,
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -93,9 +137,14 @@ const Register = () => {
         : /duplicate|already/i.test(error.message)
           ? "Account with this email exists."
           : error.message;
-      toast.error(message);
+      failSignup({
+        stage: "Account creation / database profile trigger",
+        summary: message,
+        details: readableError(error),
+      }, message);
       return;
     }
+    setSignupDiagnostic(null);
     toast.success(`We sent a 6-digit code to ${email}`);
     setOtpStep(true);
   };
@@ -111,7 +160,11 @@ const Register = () => {
     });
     if (error || !data.user) {
       setVerifying(false);
-      return toast.error(error?.message || "Invalid or expired code");
+      return failSignup({
+        stage: "Email OTP verification",
+        summary: error?.message || "Invalid or expired code",
+        details: readableError(error) || "No user session returned after OTP verification.",
+      }, error?.message || "Invalid or expired code");
     }
     const uid = data.user.id;
 
@@ -123,9 +176,14 @@ const Register = () => {
       });
       if (!pErr) {
         const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
-        await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
+        const { error: profilePhotoError } = await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
+        if (profilePhotoError) {
+          setSignupDiagnostic({ stage: "Profile photo save", summary: "Photo uploaded, but profile photo URL could not be saved.", details: readableError(profilePhotoError) });
+        }
+      } else {
+        setSignupDiagnostic({ stage: "Passport photo upload", summary: "Email verified, but passport photo upload failed.", details: readableError(pErr) });
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
 
     // Upload ID card
     try {
@@ -135,11 +193,15 @@ const Register = () => {
         upsert: true, contentType: idCard!.type,
       });
       if (upErr) {
+        setSignupDiagnostic({ stage: "ID card upload", summary: "Account verified but ID card upload failed.", details: readableError(upErr) });
         toast.warning("Account verified but ID card upload failed. Please re-upload from your profile.");
       } else {
-        await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
+        const { error: idProfileError } = await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
+        if (idProfileError) {
+          setSignupDiagnostic({ stage: "ID card save", summary: "ID card uploaded, but profile record could not be updated.", details: readableError(idProfileError) });
+        }
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
 
     setVerifying(false);
     toast.success("Email verified! Pending admin approval.");
@@ -182,6 +244,16 @@ const Register = () => {
             We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>.
             Enter it below to finish creating your account.
           </p>
+          {signupDiagnostic && (
+            <Alert variant="destructive" className="mb-5">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Signup failed at: {signupDiagnostic.stage}</AlertTitle>
+              <AlertDescription className="space-y-1">
+                <p>{signupDiagnostic.summary}</p>
+                {signupDiagnostic.details && <p className="break-words font-mono text-xs">{signupDiagnostic.details}</p>}
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={verifyAndUpload} className="space-y-4">
             <div>
               <Label htmlFor="otp">6-digit code</Label>
@@ -214,6 +286,17 @@ const Register = () => {
         </Link>
         <h1 className="mb-1 text-2xl font-bold">Create your student account</h1>
         <p className="mb-6 text-sm text-muted-foreground">An admin will review your photo and ID card before approval.</p>
+
+        {signupDiagnostic && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Signup failed at: {signupDiagnostic.stage}</AlertTitle>
+            <AlertDescription className="space-y-1">
+              <p>{signupDiagnostic.summary}</p>
+              {signupDiagnostic.details && <p className="break-words font-mono text-xs">{signupDiagnostic.details}</p>}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
