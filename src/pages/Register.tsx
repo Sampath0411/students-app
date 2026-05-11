@@ -54,6 +54,7 @@ const Register = () => {
   const [photoPreview, setPhotoPreview] = useState<string>("");
   const [cropFile, setCropFile] = useState<File | null>(null);
   const photoRef = useRef<HTMLInputElement>(null);
+  const [signupDiagnostic, setSignupDiagnostic] = useState<SignupDiagnostic | null>(null);
   const [form, setForm] = useState({
     full_name: "", email: "", password: "", student_id: "", phone: "", department: "", date_of_birth: "",
   });
@@ -66,6 +67,11 @@ const Register = () => {
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const failSignup = (diagnostic: SignupDiagnostic, toastMessage?: string) => {
+    setSignupDiagnostic(diagnostic);
+    toast.error(toastMessage || diagnostic.summary);
+  };
+
   const onPhotoPick = (file: File | null) => {
     if (!file) { setPhotoBlob(null); setPhotoPreview(""); return; }
     if (!file.type.startsWith("image/")) { toast.error("Photo must be an image"); return; }
@@ -75,13 +81,17 @@ const Register = () => {
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    if (maintenance) { toast.error("System is under maintenance. Please try again later."); return; }
-    if (!photoBlob) { toast.error("Please upload a passport-size photo."); return; }
-    if (!idCard) { toast.error("Please upload your Student ID card."); return; }
-    if (idCard.size > 10 * 1024 * 1024) { toast.error("ID card must be under 10MB."); return; }
+    setSignupDiagnostic(null);
+    if (maintenance) { failSignup({ stage: "Before submit", summary: "System is under maintenance." }, "System is under maintenance. Please try again later."); return; }
+    if (!photoBlob) { failSignup({ stage: "Photo validation", summary: "Passport-size photo is missing." }, "Please upload a passport-size photo."); return; }
+    if (!idCard) { failSignup({ stage: "ID card validation", summary: "Student ID card file is missing." }, "Please upload your Student ID card."); return; }
+    if (idCard.size > 10 * 1024 * 1024) { failSignup({ stage: "ID card validation", summary: "ID card file is larger than 10 MB.", details: `Selected size: ${(idCard.size / 1024 / 1024).toFixed(2)} MB` }, "ID card must be under 10MB."); return; }
 
     const parsed = schema.safeParse(form);
-    if (!parsed.success) { toast.error(parsed.error.errors[0].message); return; }
+    if (!parsed.success) {
+      failSignup({ stage: "Form validation", summary: parsed.error.errors[0].message, details: parsed.error.errors.map((err) => `${err.path.join(".")}: ${err.message}`).join(" | ") });
+      return;
+    }
     const email = parsed.data.email.trim().toLowerCase();
     const registrationNumber = parsed.data.student_id.trim();
 
