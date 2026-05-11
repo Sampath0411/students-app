@@ -244,6 +244,16 @@ const Register = () => {
             We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>.
             Enter it below to finish creating your account.
           </p>
+          {signupDiagnostic && (
+            <Alert variant="destructive" className="mb-5">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Signup failed at: {signupDiagnostic.stage}</AlertTitle>
+              <AlertDescription className="space-y-1">
+                <p>{signupDiagnostic.summary}</p>
+                {signupDiagnostic.details && <p className="break-words font-mono text-xs">{signupDiagnostic.details}</p>}
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={verifyAndUpload} className="space-y-4">
             <div>
               <Label htmlFor="otp">6-digit code</Label>
@@ -276,6 +286,17 @@ const Register = () => {
         </Link>
         <h1 className="mb-1 text-2xl font-bold">Create your student account</h1>
         <p className="mb-6 text-sm text-muted-foreground">An admin will review your photo and ID card before approval.</p>
+
+        {signupDiagnostic && (
+          <Alert variant="destructive" className="mb-6">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Signup failed at: {signupDiagnostic.stage}</AlertTitle>
+            <AlertDescription className="space-y-1">
+              <p>{signupDiagnostic.summary}</p>
+              {signupDiagnostic.details && <p className="break-words font-mono text-xs">{signupDiagnostic.details}</p>}
+            </AlertDescription>
+          </Alert>
+        )}
 
         <form onSubmit={onSubmit} className="grid gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
