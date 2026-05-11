@@ -99,10 +99,22 @@ const Register = () => {
     const { data: taken, error: checkError } = await supabase.rpc("student_id_taken" as any, { _sid: registrationNumber });
     if (checkError) {
       setLoading(false);
-      toast.error("Could not verify registration number. Please try again.");
+      failSignup({
+        stage: "Registration number duplicate check",
+        summary: "Could not verify whether this registration number is already used.",
+        details: readableError(checkError),
+      }, "Could not verify registration number. Please try again.");
       return;
     }
-    if (taken) { setLoading(false); toast.error("That registration number is already registered."); return; }
+    if (taken) {
+      setLoading(false);
+      failSignup({
+        stage: "Registration number duplicate check",
+        summary: "That registration number is already registered.",
+        details: `registration_number: ${registrationNumber}`,
+      });
+      return;
+    }
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -125,9 +137,14 @@ const Register = () => {
         : /duplicate|already/i.test(error.message)
           ? "Account with this email exists."
           : error.message;
-      toast.error(message);
+      failSignup({
+        stage: "Account creation / database profile trigger",
+        summary: message,
+        details: readableError(error),
+      }, message);
       return;
     }
+    setSignupDiagnostic(null);
     toast.success(`We sent a 6-digit code to ${email}`);
     setOtpStep(true);
   };
@@ -143,7 +160,11 @@ const Register = () => {
     });
     if (error || !data.user) {
       setVerifying(false);
-      return toast.error(error?.message || "Invalid or expired code");
+      return failSignup({
+        stage: "Email OTP verification",
+        summary: error?.message || "Invalid or expired code",
+        details: readableError(error) || "No user session returned after OTP verification.",
+      }, error?.message || "Invalid or expired code");
     }
     const uid = data.user.id;
 
@@ -155,9 +176,14 @@ const Register = () => {
       });
       if (!pErr) {
         const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
-        await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
+        const { error: profilePhotoError } = await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
+        if (profilePhotoError) {
+          setSignupDiagnostic({ stage: "Profile photo save", summary: "Photo uploaded, but profile photo URL could not be saved.", details: readableError(profilePhotoError) });
+        }
+      } else {
+        setSignupDiagnostic({ stage: "Passport photo upload", summary: "Email verified, but passport photo upload failed.", details: readableError(pErr) });
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
 
     // Upload ID card
     try {
@@ -167,11 +193,15 @@ const Register = () => {
         upsert: true, contentType: idCard!.type,
       });
       if (upErr) {
+        setSignupDiagnostic({ stage: "ID card upload", summary: "Account verified but ID card upload failed.", details: readableError(upErr) });
         toast.warning("Account verified but ID card upload failed. Please re-upload from your profile.");
       } else {
-        await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
+        const { error: idProfileError } = await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
+        if (idProfileError) {
+          setSignupDiagnostic({ stage: "ID card save", summary: "ID card uploaded, but profile record could not be updated.", details: readableError(idProfileError) });
+        }
       }
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
 
     setVerifying(false);
     toast.success("Email verified! Pending admin approval.");
