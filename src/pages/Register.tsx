@@ -6,12 +6,34 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Loader2, Upload, Wrench, Camera, X, Mail } from "lucide-react";
+import { AlertCircle, Loader2, Upload, Wrench, Camera, X, Mail } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { ImageCropper } from "@/components/ImageCropper";
 import logo from "@/assets/logo.png";
+
+type SignupDiagnostic = {
+  stage: string;
+  summary: string;
+  details?: string;
+};
+
+const readableError = (error: unknown) => {
+  if (!error) return undefined;
+  if (typeof error === "string") return error;
+  if (error instanceof Error) return error.message;
+  if (typeof error === "object") {
+    const source = error as Record<string, unknown>;
+    const parts = ["message", "code", "status", "name", "details", "hint"]
+      .map((key) => (source[key] ? `${key}: ${String(source[key])}` : ""))
+      .filter(Boolean);
+    if (parts.length) return parts.join(" | ");
+    try { return JSON.stringify(error); } catch { return String(error); }
+  }
+  return String(error);
+};
 
 const schema = z.object({
   full_name: z.string().trim().min(2, "Full name is too short").max(100),
