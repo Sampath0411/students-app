@@ -71,8 +71,8 @@ const Register = () => {
     stage: string,
     success: boolean,
     message?: string,
-    extra?: Record<string, unknown>,
-    userId?: string
+    extra?: Record<string, unknown> | null,
+    userId?: string | null
   ) => {
     try {
       await supabase.rpc("log_signup_event" as any, {
