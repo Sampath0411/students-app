@@ -447,6 +447,42 @@ export type Database = {
         }
         Relationships: []
       }
+      signup_logs: {
+        Row: {
+          created_at: string
+          details: Json | null
+          email: string | null
+          id: string
+          message: string | null
+          stage: string
+          student_id: string | null
+          success: boolean
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          details?: Json | null
+          email?: string | null
+          id?: string
+          message?: string | null
+          stage: string
+          student_id?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          details?: Json | null
+          email?: string | null
+          id?: string
+          message?: string | null
+          stage?: string
+          student_id?: string | null
+          success?: boolean
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       timetable: {
         Row: {
           created_at: string
@@ -512,6 +548,18 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      log_signup_event: {
+        Args: {
+          _details?: Json
+          _email?: string
+          _message?: string
+          _stage: string
+          _student_id?: string
+          _success: boolean
+          _user_id?: string
+        }
+        Returns: undefined
       }
       student_id_taken: { Args: { _sid: string }; Returns: boolean }
     }

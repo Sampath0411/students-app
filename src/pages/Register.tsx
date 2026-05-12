@@ -67,9 +67,30 @@ const Register = () => {
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const logServer = async (
+    stage: string,
+    success: boolean,
+    message?: string,
+    extra?: Record<string, unknown> | null,
+    userId?: string | null
+  ) => {
+    try {
+      await supabase.rpc("log_signup_event" as any, {
+        _stage: stage,
+        _success: success,
+        _email: form.email?.trim().toLowerCase() || null,
+        _student_id: form.student_id?.trim() || null,
+        _user_id: userId || null,
+        _message: message?.slice(0, 1000) || null,
+        _details: extra ? (extra as any) : null,
+      });
+    } catch (e) { console.warn("signup log failed", e); }
+  };
+
   const failSignup = (diagnostic: SignupDiagnostic, toastMessage?: string) => {
     setSignupDiagnostic(diagnostic);
     toast.error(toastMessage || diagnostic.summary);
+    void logServer(`client.${diagnostic.stage}`, false, diagnostic.summary, { details: diagnostic.details });
   };
 
   const onPhotoPick = (file: File | null) => {
@@ -96,6 +117,8 @@ const Register = () => {
     const registrationNumber = parsed.data.student_id.trim();
 
     setLoading(true);
+    void logServer("client.submit", true, "Submit started", { email, registrationNumber });
+
     const { data: taken, error: checkError } = await supabase.rpc("student_id_taken" as any, { _sid: registrationNumber });
     if (checkError) {
       setLoading(false);
@@ -106,6 +129,7 @@ const Register = () => {
       }, "Could not verify registration number. Please try again.");
       return;
     }
+    void logServer("client.rpc.student_id_taken", true, `taken=${!!taken}`);
     if (taken) {
       setLoading(false);
       failSignup({
@@ -116,11 +140,11 @@ const Register = () => {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    void logServer("client.auth.signUp.start", true, "Calling supabase.auth.signUp");
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password: form.password,
       options: {
-        // emailRedirectTo intentionally omitted — we want OTP code, not link
         data: {
           full_name: parsed.data.full_name.trim(),
           student_id: registrationNumber,
@@ -144,6 +168,7 @@ const Register = () => {
       }, message);
       return;
     }
+    void logServer("client.auth.signUp.ok", true, "signUp returned", { userId: signUpData.user?.id }, signUpData.user?.id);
     setSignupDiagnostic(null);
     toast.success(`We sent a 6-digit code to ${email}`);
     setOtpStep(true);
@@ -167,6 +192,7 @@ const Register = () => {
       }, error?.message || "Invalid or expired code");
     }
     const uid = data.user.id;
+    void logServer("client.otp.verified", true, "OTP verified", null, uid);
 
     // Upload passport photo → set as avatar
     try {
@@ -175,15 +201,20 @@ const Register = () => {
         upsert: true, contentType: "image/jpeg",
       });
       if (!pErr) {
+        void logServer("client.upload.avatar", true, "avatar uploaded", { path: photoPath }, uid);
         const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
         const { error: profilePhotoError } = await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
         if (profilePhotoError) {
+          void logServer("client.profile.avatar_url", false, readableError(profilePhotoError), null, uid);
           setSignupDiagnostic({ stage: "Profile photo save", summary: "Photo uploaded, but profile photo URL could not be saved.", details: readableError(profilePhotoError) });
+        } else {
+          void logServer("client.profile.avatar_url", true, "avatar_url saved", null, uid);
         }
       } else {
+        void logServer("client.upload.avatar", false, readableError(pErr), null, uid);
         setSignupDiagnostic({ stage: "Passport photo upload", summary: "Email verified, but passport photo upload failed.", details: readableError(pErr) });
       }
-    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
+    } catch (err) { console.error(err); void logServer("client.upload.avatar", false, readableError(err), null, uid); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
 
     // Upload ID card
     try {
@@ -193,15 +224,20 @@ const Register = () => {
         upsert: true, contentType: idCard!.type,
       });
       if (upErr) {
+        void logServer("client.upload.id_card", false, readableError(upErr), { path }, uid);
         setSignupDiagnostic({ stage: "ID card upload", summary: "Account verified but ID card upload failed.", details: readableError(upErr) });
         toast.warning("Account verified but ID card upload failed. Please re-upload from your profile.");
       } else {
+        void logServer("client.upload.id_card", true, "id-card uploaded", { path }, uid);
         const { error: idProfileError } = await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
         if (idProfileError) {
+          void logServer("client.profile.id_card_url", false, readableError(idProfileError), null, uid);
           setSignupDiagnostic({ stage: "ID card save", summary: "ID card uploaded, but profile record could not be updated.", details: readableError(idProfileError) });
+        } else {
+          void logServer("client.profile.id_card_url", true, "id_card_url saved", null, uid);
         }
       }
-    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
+    } catch (err) { console.error(err); void logServer("client.upload.id_card", false, readableError(err), null, uid); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
 
     setVerifying(false);
     toast.success("Email verified! Pending admin approval.");
