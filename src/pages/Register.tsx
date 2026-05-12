@@ -192,6 +192,7 @@ const Register = () => {
       }, error?.message || "Invalid or expired code");
     }
     const uid = data.user.id;
+    void logServer("client.otp.verified", true, "OTP verified", null, uid);
 
     // Upload passport photo → set as avatar
     try {
@@ -200,15 +201,20 @@ const Register = () => {
         upsert: true, contentType: "image/jpeg",
       });
       if (!pErr) {
+        void logServer("client.upload.avatar", true, "avatar uploaded", { path: photoPath }, uid);
         const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
         const { error: profilePhotoError } = await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
         if (profilePhotoError) {
+          void logServer("client.profile.avatar_url", false, readableError(profilePhotoError), null, uid);
           setSignupDiagnostic({ stage: "Profile photo save", summary: "Photo uploaded, but profile photo URL could not be saved.", details: readableError(profilePhotoError) });
+        } else {
+          void logServer("client.profile.avatar_url", true, "avatar_url saved", null, uid);
         }
       } else {
+        void logServer("client.upload.avatar", false, readableError(pErr), null, uid);
         setSignupDiagnostic({ stage: "Passport photo upload", summary: "Email verified, but passport photo upload failed.", details: readableError(pErr) });
       }
-    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
+    } catch (err) { console.error(err); void logServer("client.upload.avatar", false, readableError(err), null, uid); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
 
     // Upload ID card
     try {
@@ -218,15 +224,20 @@ const Register = () => {
         upsert: true, contentType: idCard!.type,
       });
       if (upErr) {
+        void logServer("client.upload.id_card", false, readableError(upErr), { path }, uid);
         setSignupDiagnostic({ stage: "ID card upload", summary: "Account verified but ID card upload failed.", details: readableError(upErr) });
         toast.warning("Account verified but ID card upload failed. Please re-upload from your profile.");
       } else {
+        void logServer("client.upload.id_card", true, "id-card uploaded", { path }, uid);
         const { error: idProfileError } = await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
         if (idProfileError) {
+          void logServer("client.profile.id_card_url", false, readableError(idProfileError), null, uid);
           setSignupDiagnostic({ stage: "ID card save", summary: "ID card uploaded, but profile record could not be updated.", details: readableError(idProfileError) });
+        } else {
+          void logServer("client.profile.id_card_url", true, "id_card_url saved", null, uid);
         }
       }
-    } catch (err) { console.error(err); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
+    } catch (err) { console.error(err); void logServer("client.upload.id_card", false, readableError(err), null, uid); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
 
     setVerifying(false);
     toast.success("Email verified! Pending admin approval.");
