@@ -117,6 +117,8 @@ const Register = () => {
     const registrationNumber = parsed.data.student_id.trim();
 
     setLoading(true);
+    void logServer("client.submit", true, "Submit started", { email, registrationNumber });
+
     const { data: taken, error: checkError } = await supabase.rpc("student_id_taken" as any, { _sid: registrationNumber });
     if (checkError) {
       setLoading(false);
@@ -127,6 +129,7 @@ const Register = () => {
       }, "Could not verify registration number. Please try again.");
       return;
     }
+    void logServer("client.rpc.student_id_taken", true, `taken=${!!taken}`);
     if (taken) {
       setLoading(false);
       failSignup({
@@ -137,11 +140,11 @@ const Register = () => {
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    void logServer("client.auth.signUp.start", true, "Calling supabase.auth.signUp");
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email,
       password: form.password,
       options: {
-        // emailRedirectTo intentionally omitted — we want OTP code, not link
         data: {
           full_name: parsed.data.full_name.trim(),
           student_id: registrationNumber,
@@ -165,6 +168,7 @@ const Register = () => {
       }, message);
       return;
     }
+    void logServer("client.auth.signUp.ok", true, "signUp returned", { userId: signUpData.user?.id }, signUpData.user?.id);
     setSignupDiagnostic(null);
     toast.success(`We sent a 6-digit code to ${email}`);
     setOtpStep(true);
