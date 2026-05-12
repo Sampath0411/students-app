@@ -67,9 +67,30 @@ const Register = () => {
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
+  const logServer = async (
+    stage: string,
+    success: boolean,
+    message?: string,
+    extra?: Record<string, unknown>,
+    userId?: string
+  ) => {
+    try {
+      await supabase.rpc("log_signup_event" as any, {
+        _stage: stage,
+        _success: success,
+        _email: form.email?.trim().toLowerCase() || null,
+        _student_id: form.student_id?.trim() || null,
+        _user_id: userId || null,
+        _message: message?.slice(0, 1000) || null,
+        _details: extra ? (extra as any) : null,
+      });
+    } catch (e) { console.warn("signup log failed", e); }
+  };
+
   const failSignup = (diagnostic: SignupDiagnostic, toastMessage?: string) => {
     setSignupDiagnostic(diagnostic);
     toast.error(toastMessage || diagnostic.summary);
+    void logServer(`client.${diagnostic.stage}`, false, diagnostic.summary, { details: diagnostic.details });
   };
 
   const onPhotoPick = (file: File | null) => {
