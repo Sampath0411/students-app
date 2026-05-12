@@ -221,29 +221,48 @@ const Login = ({ admin = false }: { admin?: boolean }) => {
           </>
         ) : (
           <>
-            <h1 className="mb-1 text-2xl font-bold">Welcome back</h1>
-            <p className="mb-6 text-sm text-muted-foreground">Sign in to your student dashboard.</p>
-            <form onSubmit={onStudentSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </div>
-              <div>
-                <Label htmlFor="password">Password</Label>
-                <PasswordInput id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </div>
-              <Button
-                type="submit"
-                className="w-full gradient-primary text-primary-foreground hover:opacity-90"
-                disabled={loading}
-              >
-                {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Sign in
-              </Button>
-            </form>
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-              New here? <Link to="/register" className="text-primary hover:underline">Create an account</Link>
-            </p>
+            <h1 className="mb-1 text-2xl font-bold">Welcome</h1>
+            <p className="mb-6 text-sm text-muted-foreground">Sign in or create your student account.</p>
+            <Tabs defaultValue="signin" className="w-full">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="signin">Sign in</TabsTrigger>
+                <TabsTrigger value="create">Create account</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="signin" className="mt-5">
+                <form onSubmit={onStudentSubmit} className="space-y-4">
+                  <div>
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="password">Password</Label>
+                    <PasswordInput id="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  </div>
+                  <Button
+                    type="submit"
+                    className="w-full gradient-primary text-primary-foreground hover:opacity-90"
+                    disabled={loading}
+                  >
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Sign in
+                  </Button>
+                </form>
+              </TabsContent>
+
+              <TabsContent value="create" className="mt-5">
+                <div className="space-y-4 text-center">
+                  <p className="text-sm text-muted-foreground">
+                    New student? Set up your account with your registration details, photo and ID card.
+                  </p>
+                  <Link to="/register" className="block">
+                    <Button className="w-full gradient-primary text-primary-foreground hover:opacity-90">
+                      Create student account
+                    </Button>
+                  </Link>
+                </div>
+              </TabsContent>
+            </Tabs>
           </>
         )}
       </Card>
