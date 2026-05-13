@@ -204,32 +204,6 @@ const Chatbot = () => {
         </DialogContent>
       </Dialog>
 
-      {(() => {
-        const ConvList = (
-          <>
-            <Button onClick={newChat} className="mb-3 gradient-primary text-primary-foreground"><Plus className="mr-2 h-4 w-4" /> New chat</Button>
-            <ScrollArea className="flex-1">
-              {convs.length === 0 && <p className="px-2 py-6 text-center text-xs text-muted-foreground">No chats yet</p>}
-              <div className="space-y-1">
-                {convs.map((c) => (
-                  <div key={c.id} className={`group flex items-center justify-between rounded-md px-2 py-2 text-sm ${activeId === c.id ? "bg-primary/15 text-primary" : "hover:bg-muted"}`}>
-                    <button onClick={() => setActiveId(c.id)} className="flex-1 truncate text-left">
-                      <MessageCircle className="mr-2 inline h-3.5 w-3.5" />{c.title}
-                    </button>
-                    <button onClick={() => deleteChat(c.id)} className="md:opacity-0 md:group-hover:opacity-100"><Trash2 className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" /></button>
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-            {botName && (
-              <button className="mt-2 rounded-md border border-border p-2 text-xs text-muted-foreground hover:bg-muted" onClick={() => { setNameDraft(botName); setAskName(true); }}>
-                Bot name: <span className="font-medium text-foreground">{botName}</span>
-              </button>
-            )}
-          </>
-        );
-        return null;
-      })()}
       <div className="grid h-[calc(100vh-12rem)] gap-4 md:grid-cols-[260px_1fr] md:h-[calc(100vh-6rem)]">
         {/* Conversation list - desktop only */}
         <Card className="hidden md:flex flex-col overflow-hidden p-3">
