@@ -89,7 +89,7 @@ export const AppShell = ({ children, kind }: { children: ReactNode; kind: "admin
         </div>
       </aside>
 
-      <main className="flex-1 overflow-x-hidden pb-20 md:pb-0">
+      <main className="flex-1 overflow-x-hidden pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">
         {/* Mobile header */}
         <header className="flex items-center justify-between border-b border-border px-4 py-3 md:hidden">
           <Link to="/" className="flex items-center gap-2">
@@ -104,7 +104,7 @@ export const AppShell = ({ children, kind }: { children: ReactNode; kind: "admin
       </main>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-border bg-card/95 backdrop-blur md:hidden">
+      <nav className="fixed inset-x-0 bottom-0 z-40 flex items-stretch border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
         {bottomMain.map((item) => {
           const active = pathname === item.to;
           return (
