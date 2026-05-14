@@ -84,7 +84,7 @@ const Register = () => {
         _message: message?.slice(0, 1000) || null,
         _details: extra ? (extra as any) : null,
       });
-    } catch (e) { console.warn("signup log failed", e); }
+    } catch { /* signup log failed silently */ }
   };
 
   const failSignup = (diagnostic: SignupDiagnostic, toastMessage?: string) => {
@@ -214,7 +214,10 @@ const Register = () => {
         void logServer("client.upload.avatar", false, readableError(pErr), null, uid);
         setSignupDiagnostic({ stage: "Passport photo upload", summary: "Email verified, but passport photo upload failed.", details: readableError(pErr) });
       }
-    } catch (err) { console.error(err); void logServer("client.upload.avatar", false, readableError(err), null, uid); setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) }); }
+    } catch (err) {
+      void logServer("client.upload.avatar", false, readableError(err), null, uid);
+      setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) });
+    }
 
     // Upload ID card
     try {
@@ -237,7 +240,10 @@ const Register = () => {
           void logServer("client.profile.id_card_url", true, "id_card_url saved", null, uid);
         }
       }
-    } catch (err) { console.error(err); void logServer("client.upload.id_card", false, readableError(err), null, uid); setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) }); }
+    } catch (err) {
+      void logServer("client.upload.id_card", false, readableError(err), null, uid);
+      setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) });
+    }
 
     setVerifying(false);
     toast.success("Email verified! Pending admin approval.");
