@@ -12,7 +12,8 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import logo from "@/assets/logo.png";
 
-const ADMIN_EMAIL = "sampathlox@gmail.com";
+// Configurable admin email - set VITE_ADMIN_EMAIL in .env or use default
+const ADMIN_EMAIL = import.meta.env.VITE_ADMIN_EMAIL || "sampathlox@gmail.com";
 
 const Login = ({ admin = false }: { admin?: boolean }) => {
   const navigate = useNavigate();

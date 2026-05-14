@@ -45,45 +45,82 @@ const App = () => (
         <AuthProvider>
           <OfflineWatcher />
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Landing />} />
             <Route path="/offline" element={<Offline />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/register" element={<Register />} />
             <Route path="/login" element={<Login />} />
             <Route path="/admin/login" element={<Login admin />} />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute requireRole="student">
-                  <StudentDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/admin" element={<ProtectedRoute requireRole="admin"><AdminOverview /></ProtectedRoute>} />
-            <Route path="/admin/pending" element={<ProtectedRoute requireRole="admin"><AdminPending /></ProtectedRoute>} />
-            <Route path="/admin/students" element={<ProtectedRoute requireRole="admin"><AdminStudents /></ProtectedRoute>} />
-            <Route path="/admin/attendance" element={<ProtectedRoute requireRole="admin"><AdminAttendance /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute requireRole="student"><Notifications /></ProtectedRoute>} />
-            <Route path="/assignments" element={<ProtectedRoute requireRole="student"><StudentAssignments /></ProtectedRoute>} />
-            <Route path="/records" element={<ProtectedRoute requireRole="student"><StudentRecords /></ProtectedRoute>} />
-            <Route path="/announcements" element={<ProtectedRoute requireRole="student"><StudentAnnouncements /></ProtectedRoute>} />
-            <Route path="/profile" element={<ProtectedRoute requireRole="student"><StudentProfile /></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute requireRole="admin"><AdminOverview /></ProtectedRoute>} />
-            <Route path="/admin/pending" element={<ProtectedRoute requireRole="admin"><AdminPending /></ProtectedRoute>} />
-            <Route path="/admin/students" element={<ProtectedRoute requireRole="admin"><AdminStudents /></ProtectedRoute>} />
-            <Route path="/admin/attendance" element={<ProtectedRoute requireRole="admin"><AdminAttendance /></ProtectedRoute>} />
-            <Route path="/admin/scan" element={<ProtectedRoute requireRole="admin"><AdminScan /></ProtectedRoute>} />
-            <Route path="/admin/timetable" element={<ProtectedRoute requireRole="admin"><AdminTimetable /></ProtectedRoute>} />
-            <Route path="/admin/assignments" element={<ProtectedRoute requireRole="admin"><AdminAssignments /></ProtectedRoute>} />
-            <Route path="/admin/records" element={<ProtectedRoute requireRole="admin"><AdminRecords /></ProtectedRoute>} />
-            <Route path="/admin/announcements" element={<ProtectedRoute requireRole="admin"><AdminAnnouncements /></ProtectedRoute>} />
+
+            {/* Student routes */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute requireRole="student"><StudentDashboard /></ProtectedRoute>
+            } />
+            <Route path="/notifications" element={
+              <ProtectedRoute requireRole="student"><Notifications /></ProtectedRoute>
+            } />
+            <Route path="/assignments" element={
+              <ProtectedRoute requireRole="student"><StudentAssignments /></ProtectedRoute>
+            } />
+            <Route path="/records" element={
+              <ProtectedRoute requireRole="student"><StudentRecords /></ProtectedRoute>
+            } />
+            <Route path="/announcements" element={
+              <ProtectedRoute requireRole="student"><StudentAnnouncements /></ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute requireRole="student"><StudentProfile /></ProtectedRoute>
+            } />
+            <Route path="/attendance" element={
+              <ProtectedRoute requireRole="student"><StudentAttendanceHistory /></ProtectedRoute>
+            } />
+            <Route path="/chatbot" element={
+              <ProtectedRoute requireRole="student"><StudentChatbot /></ProtectedRoute>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute requireRole="student"><StudentSettings /></ProtectedRoute>
+            } />
+
+            {/* Admin routes */}
+            <Route path="/admin" element={
+              <ProtectedRoute requireRole="admin"><AdminOverview /></ProtectedRoute>
+            } />
+            <Route path="/admin/pending" element={
+              <ProtectedRoute requireRole="admin"><AdminPending /></ProtectedRoute>
+            } />
+            <Route path="/admin/students" element={
+              <ProtectedRoute requireRole="admin"><AdminStudents /></ProtectedRoute>
+            } />
+            <Route path="/admin/attendance" element={
+              <ProtectedRoute requireRole="admin"><AdminAttendance /></ProtectedRoute>
+            } />
+            <Route path="/admin/scan" element={
+              <ProtectedRoute requireRole="admin"><AdminScan /></ProtectedRoute>
+            } />
+            <Route path="/admin/timetable" element={
+              <ProtectedRoute requireRole="admin"><AdminTimetable /></ProtectedRoute>
+            } />
+            <Route path="/admin/assignments" element={
+              <ProtectedRoute requireRole="admin"><AdminAssignments /></ProtectedRoute>
+            } />
+            <Route path="/admin/records" element={
+              <ProtectedRoute requireRole="admin"><AdminRecords /></ProtectedRoute>
+            } />
+            <Route path="/admin/announcements" element={
+              <ProtectedRoute requireRole="admin"><AdminAnnouncements /></ProtectedRoute>
+            } />
             <Route path="/admin/edit-attendance" element={<Navigate to="/admin/attendance" replace />} />
-            <Route path="/admin/reports" element={<ProtectedRoute requireRole="admin"><AdminAttendanceReports /></ProtectedRoute>} />
-            <Route path="/attendance" element={<ProtectedRoute requireRole="student"><StudentAttendanceHistory /></ProtectedRoute>} />
-            <Route path="/chatbot" element={<ProtectedRoute requireRole="student"><StudentChatbot /></ProtectedRoute>} />
-            <Route path="/admin/settings" element={<ProtectedRoute requireRole="admin"><AdminSettings /></ProtectedRoute>} />
-            <Route path="/admin/content" element={<ProtectedRoute requireRole="admin"><AdminContent /></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute requireRole="student"><StudentSettings /></ProtectedRoute>} />
+            <Route path="/admin/reports" element={
+              <ProtectedRoute requireRole="admin"><AdminAttendanceReports /></ProtectedRoute>
+            } />
+            <Route path="/admin/settings" element={
+              <ProtectedRoute requireRole="admin"><AdminSettings /></ProtectedRoute>
+            } />
+            <Route path="/admin/content" element={
+              <ProtectedRoute requireRole="admin"><AdminContent /></ProtectedRoute>
+            } />
+
+            {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
