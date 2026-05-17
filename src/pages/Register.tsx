@@ -1,4 +1,4 @@
-import { useState, FormEvent, useRef } from "react";
+import { useState, FormEvent, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { AlertCircle, Loader2, Upload, Wrench, Camera, X, Mail } from "lucide-react";
+import { AlertCircle, Loader2, Upload, Wrench, Camera, X, Mail, CheckCircle } from "lucide-react";
 import { PasswordInput } from "@/components/PasswordInput";
 import { useMaintenanceMode } from "@/hooks/useMaintenanceMode";
 import { ImageCropper } from "@/components/ImageCropper";
@@ -59,11 +59,8 @@ const Register = () => {
     full_name: "", email: "", password: "", student_id: "", phone: "", department: "", date_of_birth: "",
   });
 
-  // OTP verification step
-  const [otpStep, setOtpStep] = useState(false);
-  const [otp, setOtp] = useState("");
-  const [verifying, setVerifying] = useState(false);
-  const [resending, setResending] = useState(false);
+  // Email confirmation step
+  const [confirmationSent, setConfirmationSent] = useState(false);
 
   const update = (k: string, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
@@ -99,6 +96,60 @@ const Register = () => {
     if (file.size > 8 * 1024 * 1024) { toast.error("Photo must be under 8 MB"); return; }
     setCropFile(file);
   };
+
+  const uploadFilesAfterConfirmation = async (uid: string) => {
+    // Upload passport photo
+    if (photoBlob) {
+      try {
+        const photoPath = `${uid}/avatar-${Date.now()}.jpg`;
+        const { error: pErr } = await supabase.storage.from("avatars").upload(photoPath, photoBlob, {
+          upsert: true, contentType: "image/jpeg",
+        });
+        if (!pErr) {
+          const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
+          await supabase.from("profiles").update({ avatar_url: pub.publicUrl }).eq("id", uid);
+        }
+      } catch (err) {
+        void logServer("client.upload.avatar", false, readableError(err), null, uid);
+      }
+    }
+
+    // Upload ID card
+    if (idCard) {
+      try {
+        const ext = (idCard.name.split(".").pop() || "bin").toLowerCase();
+        const path = `${uid}/id-card.${ext}`;
+        const { error: upErr } = await supabase.storage.from("id-cards").upload(path, idCard, {
+          upsert: true, contentType: idCard.type,
+        });
+        if (!upErr) {
+          await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard.name }).eq("id", uid);
+        }
+      } catch (err) {
+        void logServer("client.upload.id_card", false, readableError(err), null, uid);
+      }
+    }
+  };
+
+  // Check for existing session on load (user clicked email confirmation link)
+  useEffect(() => {
+    const checkExistingSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const pending = sessionStorage.getItem("pendingRegistration");
+        if (pending) {
+          const { uid } = JSON.parse(pending);
+          if (uid === session.user.id) {
+            await uploadFilesAfterConfirmation(session.user.id);
+            sessionStorage.removeItem("pendingRegistration");
+            toast.success("Email verified! Account created.");
+            navigate("/dashboard");
+          }
+        }
+      }
+    };
+    checkExistingSession();
+  }, []);
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -145,6 +196,7 @@ const Register = () => {
       email,
       password: form.password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: parsed.data.full_name.trim(),
           student_id: registrationNumber,
@@ -170,92 +222,13 @@ const Register = () => {
     }
     void logServer("client.auth.signUp.ok", true, "signUp returned", { userId: signUpData.user?.id }, signUpData.user?.id);
     setSignupDiagnostic(null);
-    toast.success(`We sent a 6-digit code to ${email}`);
-    setOtpStep(true);
-  };
 
-  const verifyAndUpload = async (e: FormEvent) => {
-    e.preventDefault();
-    if (otp.trim().length < 6) return toast.error("Enter the 6-digit code");
-    setVerifying(true);
-    const { data, error } = await supabase.auth.verifyOtp({
-      email: form.email.trim(),
-      token: otp.trim(),
-      type: "email",
-    });
-    if (error || !data.user) {
-      setVerifying(false);
-      return failSignup({
-        stage: "Email OTP verification",
-        summary: error?.message || "Invalid or expired code",
-        details: readableError(error) || "No user session returned after OTP verification.",
-      }, error?.message || "Invalid or expired code");
-    }
-    const uid = data.user.id;
-    void logServer("client.otp.verified", true, "OTP verified", null, uid);
-
-    // Upload passport photo → set as avatar
-    try {
-      const photoPath = `${uid}/avatar-${Date.now()}.jpg`;
-      const { error: pErr } = await supabase.storage.from("avatars").upload(photoPath, photoBlob!, {
-        upsert: true, contentType: "image/jpeg",
-      });
-      if (!pErr) {
-        void logServer("client.upload.avatar", true, "avatar uploaded", { path: photoPath }, uid);
-        const { data: pub } = supabase.storage.from("avatars").getPublicUrl(photoPath);
-        const { error: profilePhotoError } = await supabase.from("profiles").update({ avatar_url: pub.publicUrl } as any).eq("id", uid);
-        if (profilePhotoError) {
-          void logServer("client.profile.avatar_url", false, readableError(profilePhotoError), null, uid);
-          setSignupDiagnostic({ stage: "Profile photo save", summary: "Photo uploaded, but profile photo URL could not be saved.", details: readableError(profilePhotoError) });
-        } else {
-          void logServer("client.profile.avatar_url", true, "avatar_url saved", null, uid);
-        }
-      } else {
-        void logServer("client.upload.avatar", false, readableError(pErr), null, uid);
-        setSignupDiagnostic({ stage: "Passport photo upload", summary: "Email verified, but passport photo upload failed.", details: readableError(pErr) });
-      }
-    } catch (err) {
-      void logServer("client.upload.avatar", false, readableError(err), null, uid);
-      setSignupDiagnostic({ stage: "Passport photo upload", summary: "Unexpected photo upload error.", details: readableError(err) });
-    }
-
-    // Upload ID card
-    try {
-      const ext = (idCard!.name.split(".").pop() || "bin").toLowerCase();
-      const path = `${uid}/id-card.${ext}`;
-      const { error: upErr } = await supabase.storage.from("id-cards").upload(path, idCard!, {
-        upsert: true, contentType: idCard!.type,
-      });
-      if (upErr) {
-        void logServer("client.upload.id_card", false, readableError(upErr), { path }, uid);
-        setSignupDiagnostic({ stage: "ID card upload", summary: "Account verified but ID card upload failed.", details: readableError(upErr) });
-        toast.warning("Account verified but ID card upload failed. Please re-upload from your profile.");
-      } else {
-        void logServer("client.upload.id_card", true, "id-card uploaded", { path }, uid);
-        const { error: idProfileError } = await supabase.from("profiles").update({ id_card_url: path, id_card_name: idCard!.name }).eq("id", uid);
-        if (idProfileError) {
-          void logServer("client.profile.id_card_url", false, readableError(idProfileError), null, uid);
-          setSignupDiagnostic({ stage: "ID card save", summary: "ID card uploaded, but profile record could not be updated.", details: readableError(idProfileError) });
-        } else {
-          void logServer("client.profile.id_card_url", true, "id_card_url saved", null, uid);
-        }
-      }
-    } catch (err) {
-      void logServer("client.upload.id_card", false, readableError(err), null, uid);
-      setSignupDiagnostic({ stage: "ID card upload", summary: "Unexpected ID card upload error.", details: readableError(err) });
-    }
-
-    setVerifying(false);
-    toast.success("Email verified! Pending admin approval.");
-    navigate("/dashboard");
-  };
-
-  const resendOtp = async () => {
-    setResending(true);
-    const { error } = await supabase.auth.resend({ type: "signup", email: form.email.trim() });
-    setResending(false);
-    if (error) toast.error(error.message);
-    else toast.success("New code sent");
+    // Store form data for after confirmation
+    sessionStorage.setItem("pendingRegistration", JSON.stringify({
+      uid: signUpData.user?.id,
+      email,
+    }));
+    setConfirmationSent(true);
   };
 
   if (maintenance) {
@@ -270,50 +243,39 @@ const Register = () => {
     );
   }
 
-  if (otpStep) {
+  if (confirmationSent) {
     return (
       <div className="container flex min-h-screen items-center justify-center px-4 py-10">
-        <Card className="card-elevated w-full max-w-md p-6 sm:p-8">
+        <Card className="card-elevated w-full max-w-md p-6 sm:p-8 text-center">
           <div className="mb-6 flex items-center gap-2">
             <img src={logo} alt="CS&SE App" className="h-9 w-9 rounded-lg" />
             <span className="font-bold">CS&amp;SE App</span>
           </div>
-          <div className="mb-5 flex items-center gap-2">
-            <Mail className="h-5 w-5 text-primary" />
-            <h1 className="text-2xl font-bold">Verify your email</h1>
-          </div>
-          <p className="mb-5 text-sm text-muted-foreground">
-            We sent a 6-digit code to <span className="font-medium text-foreground">{form.email}</span>.
-            Enter it below to finish creating your account.
-          </p>
-          {signupDiagnostic && (
-            <Alert variant="destructive" className="mb-5">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Signup failed at: {signupDiagnostic.stage}</AlertTitle>
-              <AlertDescription className="space-y-1">
-                <p>{signupDiagnostic.summary}</p>
-                {signupDiagnostic.details && <p className="break-words font-mono text-xs">{signupDiagnostic.details}</p>}
-              </AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={verifyAndUpload} className="space-y-4">
-            <div>
-              <Label htmlFor="otp">6-digit code</Label>
-              <Input
-                id="otp" inputMode="numeric" autoComplete="one-time-code" maxLength={6}
-                value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-                className="text-center text-lg tracking-[0.5em]" required
-              />
+          <div className="mb-5 flex justify-center">
+            <div className="rounded-full bg-primary/10 p-4">
+              <Mail className="h-10 w-10 text-primary" />
             </div>
-            <Button type="submit" disabled={verifying} className="w-full gradient-primary text-primary-foreground hover:opacity-90">
-              {verifying && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Verify & finish
-            </Button>
-            <button type="button" onClick={resendOtp} disabled={resending}
-              className="w-full text-xs text-primary hover:underline">
-              {resending ? "Sending…" : "Resend code"}
+          </div>
+          <h1 className="mb-2 text-2xl font-bold">Check your email</h1>
+          <p className="mb-6 text-sm text-muted-foreground">
+            We sent a verification link to <br />
+            <span className="font-medium text-foreground">{form.email}</span>
+          </p>
+          <p className="mb-6 text-sm text-muted-foreground">
+            Click the link in the email to verify your account and complete registration.
+          </p>
+          <div className="rounded-lg bg-muted p-4 text-left">
+            <p className="text-xs text-muted-foreground">
+              <CheckCircle className="mr-1 inline h-3 w-3" />
+              After verification, you'll be automatically logged in and can access your dashboard.
+            </p>
+          </div>
+          <p className="mt-6 text-sm text-muted-foreground">
+            Didn't receive the email?{" "}
+            <button onClick={() => setConfirmationSent(false)} className="text-primary hover:underline">
+              Try again
             </button>
-          </form>
+          </p>
         </Card>
       </div>
     );
@@ -413,7 +375,7 @@ const Register = () => {
           <div className="md:col-span-2">
             <Button type="submit" className="w-full gradient-primary text-primary-foreground hover:opacity-90" disabled={loading}>
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Send verification code
+              Create account
             </Button>
           </div>
         </form>

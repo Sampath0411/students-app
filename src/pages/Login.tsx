@@ -36,6 +36,26 @@ const Login = ({ admin = false }: { admin?: boolean }) => {
     }
   }, [admin]);
 
+  // Check for email confirmation on page load
+  useEffect(() => {
+    const checkEmailConfirmation = async () => {
+      // Check for hash in URL (email confirmation)
+      if (window.location.hash.includes("access_token")) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          const pending = sessionStorage.getItem("pendingRegistration");
+          if (pending) {
+            sessionStorage.removeItem("pendingRegistration");
+            toast.success("Email verified! Account created.");
+            navigate("/dashboard");
+          }
+        }
+      }
+    };
+    // Delay to let Supabase process the hash
+    setTimeout(checkEmailConfirmation, 500);
+  }, []);
+
   const finalizeLogin = async (userId: string) => {
     const { data: roles } = await supabase.from("user_roles").select("role").eq("user_id", userId);
     const isAdmin = roles?.some((r) => r.role === "admin");
